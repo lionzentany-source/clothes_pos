@@ -1,0 +1,30 @@
+2023-09-01 11:34:45,662[13]INFO  InfoLog - Begin Gettings!
+2023-09-01 11:34:45,746[1]INFO  InfoLog - Gettings Sucessful!
+2023-09-01 11:34:47,101[1]INFO  InfoLog - Stop Monitor
+2023-09-01 11:34:48,357[13]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:48,503[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:49,470[13]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:49,574[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:50,637[11]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:50,753[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:51,853[13]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:51,970[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:53,101[12]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:53,226[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:53,753[12]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:53,874[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:54,149[13]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:34:54,203[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:54,462[1]INFO  InfoLog - End label operation
+2023-09-01 11:34:55,902[11]INFO  InfoLog - Begin Gettings!
+2023-09-01 11:34:55,966[1]INFO  InfoLog - Gettings Sucessful!
+2023-09-01 11:34:56,686[1]INFO  InfoLog - Begin Monitor
+2023-09-01 11:35:00,412[1]INFO  InfoLog - Stop Monitor
+2023-09-01 11:35:01,612[13]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:35:01,726[1]INFO  InfoLog - End label operation
+2023-09-01 11:35:06,400[14]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:35:06,565[1]INFO  InfoLog - End label operation
+2023-09-01 11:35:07,276[5]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:35:07,441[1]INFO  InfoLog - End label operation
+2023-09-01 11:35:08,436[14]INFO  InfoLog - Begin Read Tag
+2023-09-01 11:35:08,599[1]INFO  InfoLog - End label operation

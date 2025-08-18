@@ -1,0 +1,161 @@
+﻿<UserControl x:Class="UHF_Desk.ReadWriteView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+             xmlns:local="clr-namespace:UHF_Desk"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="1000"
+             DataContext="{Binding Source={StaticResource locator},Path=ReadWriteViewModel}">
+    <UserControl.Resources>
+        <ResourceDictionary>
+            <Style x:Key="CenterAlignmentStyle" TargetType="TextBlock">
+                <Setter Property="TextAlignment" Value="Center"/>
+                <Setter Property="VerticalAlignment" Value="Center"/>
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+        </ResourceDictionary>
+    </UserControl.Resources>
+    <Grid Margin="10">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="320"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.RowSpan="3" BorderThickness="0,0,1,0" BorderBrush="#eee" Margin="0,5"/>
+
+        <DataGrid Grid.RowSpan="2" Background="Transparent" BorderThickness="0" ItemsSource="{Binding MonitorEpcDtl}" Margin="5" VerticalScrollBarVisibility="Hidden"
+                  IsReadOnly="False" x:Name="dataGrid1" IsEnabled="{Binding IsEnabled}">
+            <DataGrid.Columns>
+                <DataGridTemplateColumn Width="50">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <RadioButton Style="{StaticResource CheckBoxStyle}" HorizontalAlignment="Center" IsChecked="{Binding IsChecked, Mode= TwoWay, UpdateSourceTrigger=PropertyChanged}" GroupName="IsCheck"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="{DynamicResource Code}" Width="260" Binding="{Binding Code}"  ElementStyle="{StaticResource CenterAlignmentStyle}" IsReadOnly="True"/>
+            </DataGrid.Columns>
+            <b:Interaction.Triggers>
+                <b:EventTrigger EventName="MouseLeftButtonDown" >
+                    <b:InvokeCommandAction Command="{Binding SelectionChangedCommand}" CommandParameter="{Binding ElementName=dataGrid1, Path=SelectedItem}" />
+                </b:EventTrigger>
+            </b:Interaction.Triggers>
+        </DataGrid>
+
+        <TabControl Grid.Column="1" Margin="5,0" BorderThickness="0,1,0,0">
+            <TabItem Header="{DynamicResource RWTag}" IsEnabled="{Binding IsEnabled}" Style="{StaticResource LineTabItem}">
+                <StackPanel>
+                    <Border BorderThickness="1" BorderBrush="#ccc" Margin="5" CornerRadius="5" IsEnabled="{Binding IsEnabled}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="Reserve" Margin="20,10" IsChecked="{Binding Tag.IsReserve}"/>
+                            <RadioButton Content="EPC"  Margin="20,10" IsChecked="{Binding Tag.IsEPC}"/>
+                            <RadioButton Content="TID"  Margin="20,10" IsChecked="{Binding Tag.IsTID}"/>
+                            <RadioButton Content="USER" Margin="20,10" IsChecked="{Binding Tag.IsUSER}"/>
+                        </StackPanel>
+                    </Border>
+                    <Grid Margin="0,5"  IsEnabled="{Binding IsEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource PasswordHEX}" VerticalAlignment="Center" Margin="5,0" Foreground="Black"/>
+                        <TextBox Height="30" Text="{Binding Tag.PasswordHEX,UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource BaseTextBoxStyle}" Margin="5,0" Grid.Column="1"/>
+                        <TextBlock Text="{DynamicResource StartAddrWORD}" VerticalAlignment="Center" Margin="5,0" Grid.Column="2" Foreground="Black"/>
+                        <TextBox Height="30" Text="{Binding Tag.StartAddrWORD}" Style="{StaticResource BaseTextBoxStyle}" Margin="5,0" Grid.Column="3"/>
+                        <TextBlock Text="{DynamicResource DataLenWORD}" VerticalAlignment="Center" Margin="5,0" Grid.Column="4" Foreground="Black"/>
+                        <TextBox Height="30" Text="{Binding Tag.DataLenWORD}" Style="{StaticResource BaseTextBoxStyle}" Margin="5,0" Grid.Column="5"/>
+                    </Grid>
+                    <Grid Margin="5" IsEnabled="{Binding IsEnabled}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource  WriteData}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Black"/>
+                        <TextBox Grid.Column="1" Height="30" Text="{Binding Tag.WriteData,UpdateSourceTrigger=PropertyChanged}" Width="Auto" Style="{StaticResource BaseTextBoxStyle}"/>
+                    </Grid>
+                    <Grid Margin="5">
+                        <Button Grid.Column="1" Content="{DynamicResource ContinuousWrite}" Height="30" Width="200" Style="{StaticResource NoneButtonStlye}" Command="{Binding ContinuousWriteCommand}" 
+                                Margin="5,0" Cursor="Hand" HorizontalAlignment="Left"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button Grid.Column="1" Content="{Binding ReadTagText}" Height="30" Width="80" Style="{StaticResource NormalButtonStyle}" Command="{Binding ButtonClickCommand}" 
+                                    CommandParameter="Read" Margin="5,0" Cursor="Hand" Background="{Binding ReadTagBackground}"/>
+                            <Button HorizontalAlignment="Left" Content="{Binding WriteTagText}" Height="30" Width="80" Style="{StaticResource NormalButtonStyle}"
+                                    Command="{Binding ButtonClickCommand}" CommandParameter="Write" Margin="5" Cursor="Hand" Background="{Binding WriteTagBackground}"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="{DynamicResource LockTag}" IsEnabled="{Binding IsEnabled}" Style="{StaticResource LineTabItem}">
+                <StackPanel>
+                    <Border BorderThickness="1" BorderBrush="#ccc" Margin="5" CornerRadius="5">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="{DynamicResource AccessingPwdArea}" IsChecked="{Binding LockTag.IsAccessingPwdArea}" Margin="20,10"/>
+                            <RadioButton Content="{DynamicResource KillPwdArea}" IsChecked="{Binding LockTag.IsKillPwdArea}"  Margin="20,10"/>
+                            <RadioButton Content="EPC"  Margin="20,10" IsChecked="{Binding LockTag.IsEPC}"/>
+                            <RadioButton Content="TID" Margin="20,10" IsChecked="{Binding LockTag.IsTID}"/>
+                            <RadioButton Content="USER" Margin="20,10" IsChecked="{Binding LockTag.IsUSER}"/>
+                        </StackPanel>
+                    </Border>
+                    <Border BorderThickness="1" BorderBrush="#ccc" Margin="5" CornerRadius="5">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Content="{DynamicResource Openness}" Margin="20,10" IsChecked="{Binding LockTag.IsOpenness}"/>
+                            <RadioButton Content="{DynamicResource Lock}"  Margin="30,10" IsChecked="{Binding LockTag.IsLock}"/>
+                            <RadioButton Content="{DynamicResource PermanentOpenness}"  Margin="30,10" IsChecked="{Binding LockTag.IsPermanentOpenness}"/>
+                            <RadioButton Content="{DynamicResource PermanentLock}" Margin="30,10" IsChecked="{Binding LockTag.IsPermanentLock}"/>
+                        </StackPanel>
+                    </Border>
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource AccessPwdHEX}" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="Black"/>
+                        <TextBox Grid.Column="1" Height="30" Text="{Binding LockTag.AccessPwdHEX,UpdateSourceTrigger=PropertyChanged}" Width="Auto" Style="{StaticResource BaseTextBoxStyle}"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="5" HorizontalAlignment="Right">
+                        <Button Grid.Column="1" Content="{Binding LockTagText}" Height="30" Width="80" Style="{StaticResource NormalButtonStyle}" Command="{Binding ButtonClickCommand}" 
+                                    CommandParameter="Lock" Margin="5,0" Cursor="Hand" Background="{Binding LockTagBackground}"/>
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="{DynamicResource KillTag}" IsEnabled="{Binding IsEnabled}" Style="{StaticResource LineTabItem}">
+                <StackPanel>
+                    <Grid Margin="5">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{DynamicResource KillPwdHEX}" VerticalAlignment="Center" Margin="5,0" Foreground="Black"/>
+                        <TextBox Grid.Column="1" Height="30" Text="{Binding LockTag.KillPwdHEX,UpdateSourceTrigger=PropertyChanged}" Width="Auto" Style="{StaticResource BaseTextBoxStyle}" Margin="5,0"/>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="5" HorizontalAlignment="Right">
+                        <Button Grid.Column="1" Content="{Binding KillTagText}" Height="30" Width="80" Style="{StaticResource NormalButtonStyle}" Command="{Binding ButtonClickCommand}" 
+                                    CommandParameter="Kill" Margin="5,0" Cursor="Hand" Background="{Binding KillTagBackground}"/>
+                    </StackPanel>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <DataGrid Grid.Column="1" Grid.Row="1" Background="Transparent" BorderThickness="0" ItemsSource="{Binding ReadWriteData}" CanUserSortColumns="True" Margin="5">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="PC" Width="160" Binding="{Binding PC}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+                <DataGridTextColumn Header="CRC" Width="160" Binding="{Binding CRC}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+                <DataGridTextColumn Header="EPC" Width="1*" Binding="{Binding Code}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+                <DataGridTextColumn Header="{DynamicResource DataLen}" Width="80" Binding="{Binding DataLen}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+                <DataGridTextColumn Header="{DynamicResource Data}" Width="160" Binding="{Binding Date}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+                <DataGridTextColumn Header="{DynamicResource Ant}" Width="80" Binding="{Binding Ant}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+                <DataGridTextColumn Header="{DynamicResource Number}" Width="80" Binding="{Binding Number}"  ElementStyle="{StaticResource CenterAlignmentStyle}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>
