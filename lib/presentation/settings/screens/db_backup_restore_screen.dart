@@ -5,7 +5,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:file_selector/file_selector.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
-import '../../../l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class DbBackupRestoreScreen extends StatefulWidget {
   const DbBackupRestoreScreen({super.key});
@@ -24,7 +24,7 @@ class _DbBackupRestoreScreenState extends State<DbBackupRestoreScreen> {
   }
 
   Future<void> _backup() async {
-    final l = AppLocalizations.of(context)!; // capture before awaits
+    final l = AppLocalizations.of(context); // capture before awaits
     setState(() => _working = true);
     try {
       final src = await _currentDbPath();
@@ -58,7 +58,7 @@ class _DbBackupRestoreScreenState extends State<DbBackupRestoreScreen> {
   }
 
   Future<void> _restore() async {
-    final l = AppLocalizations.of(context)!; // capture before awaits
+    final l = AppLocalizations.of(context); // capture before awaits
     final path = _restorePathCtrl.text.trim();
     if (path.isEmpty) {
       await _showError(l.error, l.enterDbPathFirst);
@@ -106,7 +106,7 @@ class _DbBackupRestoreScreenState extends State<DbBackupRestoreScreen> {
 
   Future<bool> _confirmVersionMismatch(int current, int backup) async {
     if (!mounted) return false;
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return await showCupertinoDialog<bool>(
           context: context,
           builder: (_) => CupertinoAlertDialog(
@@ -140,7 +140,7 @@ class _DbBackupRestoreScreenState extends State<DbBackupRestoreScreen> {
           CupertinoDialogAction(
             isDefaultAction: true,
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(AppLocalizations.of(ctx)!.ok),
+            child: Text(AppLocalizations.of(ctx).ok),
           ),
         ],
       ),
@@ -159,7 +159,7 @@ class _DbBackupRestoreScreenState extends State<DbBackupRestoreScreen> {
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(AppLocalizations.of(ctx)!.closeAction),
+            child: Text(AppLocalizations.of(ctx).closeAction),
           ),
         ],
       ),
@@ -168,7 +168,7 @@ class _DbBackupRestoreScreenState extends State<DbBackupRestoreScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: Text(l.dbBackupRestore),

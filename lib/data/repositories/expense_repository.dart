@@ -1,6 +1,8 @@
 import 'package:clothes_pos/data/datasources/expense_dao.dart';
 import 'package:clothes_pos/data/models/expense.dart';
 import 'package:clothes_pos/data/models/expense_category.dart';
+import 'package:clothes_pos/core/di/locator.dart';
+import 'package:clothes_pos/data/repositories/audit_repository.dart';
 
 class ExpenseRepository {
   final ExpenseDao dao;
@@ -14,9 +16,43 @@ class ExpenseRepository {
   Future<void> setCategoryActive(int id, bool active) =>
       dao.setCategoryActive(id, active);
 
-  Future<int> createExpense(Expense e) => dao.createExpense(e);
-  Future<void> updateExpense(Expense e) => dao.updateExpense(e);
-  Future<void> deleteExpense(int id) => dao.deleteExpense(id);
+  Future<int> createExpense(Expense e, {int? userId}) async {
+    final id = await dao.createExpense(e);
+    try {
+      await sl<AuditRepository>().logChange(
+        userId: userId,
+        entity: 'expense:$id',
+        field: 'create',
+        newValue: '${e.amount}',
+      );
+    } catch (_) {}
+    return id;
+  }
+
+  Future<void> updateExpense(Expense e, {int? userId}) async {
+    final oldAmt = e.amount; // we don't fetch old row for simplicity
+    await dao.updateExpense(e);
+    try {
+      await sl<AuditRepository>().logChange(
+        userId: userId,
+        entity: 'expense:${e.id}',
+        field: 'update',
+        newValue: '$oldAmt',
+      );
+    } catch (_) {}
+  }
+
+  Future<void> deleteExpense(int id, {int? userId}) async {
+    await dao.deleteExpense(id);
+    try {
+      await sl<AuditRepository>().logChange(
+        userId: userId,
+        entity: 'expense:$id',
+        field: 'delete',
+      );
+    } catch (_) {}
+  }
+
   Future<List<Expense>> listExpenses({
     DateTime? start,
     DateTime? end,

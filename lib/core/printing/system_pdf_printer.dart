@@ -42,7 +42,7 @@ class SystemPdfPrinter {
   }
 
   /// Prints provided PDF bytes either via dialog or directly (if configured).
-  Future<void> printPdfBytes(Uint8List bytes, {BuildContext? context}) async {
+  Future<void> printPdfBytes(Uint8List bytes) async {
     final openDialog = (await _settings.get('print_open_dialog')) != '0';
     if (openDialog) {
       await Printing.layoutPdf(onLayout: (_) async => bytes);
@@ -50,11 +50,9 @@ class SystemPdfPrinter {
     }
 
     var saved = await getSavedPrinter();
-    if (saved == null) {
-      if (context != null) {
-        saved = await pickAndSaveDefaultPrinter(context);
-      }
-    }
+    // No context-initiated picking here to avoid context across async gaps.
+    // Let callers handle picking a printer explicitly in UI flows.
+
     if (saved == null) {
       // Fallback to dialog if user cancelled picking or no saved printer.
       await Printing.layoutPdf(onLayout: (_) async => bytes);

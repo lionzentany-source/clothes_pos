@@ -1,4 +1,6 @@
 import 'package:clothes_pos/data/datasources/reports_dao.dart';
+import 'package:clothes_pos/core/result/result.dart';
+import 'package:clothes_pos/core/logging/app_logger.dart';
 
 class ReportsRepository {
   final ReportsDao dao;
@@ -89,4 +91,63 @@ class ReportsRepository {
     endIso: endIso,
     categoryId: categoryId,
   );
+
+  // Incremental Result wrappers (example subset)
+  Future<Result<List<Map<String, Object?>>>> salesByDayResult({
+    String? startIso,
+    String? endIso,
+    int? userId,
+    int? categoryId,
+    int? supplierId,
+  }) async {
+    try {
+      final data = await salesByDay(
+        startIso: startIso,
+        endIso: endIso,
+        userId: userId,
+        categoryId: categoryId,
+        supplierId: supplierId,
+      );
+      return ok(data);
+    } catch (e, st) {
+      AppLogger.e('salesByDay failed', error: e, stackTrace: st);
+      return fail(
+        'تعذر تحميل تقرير المبيعات اليومية',
+        code: 'report_sales_day',
+        exception: e,
+        stackTrace: st,
+        retryable: true,
+      );
+    }
+  }
+
+  Future<Result<List<Map<String, Object?>>>> topProductsResult({
+    int limit = 10,
+    String? startIso,
+    String? endIso,
+    int? userId,
+    int? categoryId,
+    int? supplierId,
+  }) async {
+    try {
+      final data = await topProducts(
+        limit: limit,
+        startIso: startIso,
+        endIso: endIso,
+        userId: userId,
+        categoryId: categoryId,
+        supplierId: supplierId,
+      );
+      return ok(data);
+    } catch (e, st) {
+      AppLogger.e('topProducts failed', error: e, stackTrace: st);
+      return fail(
+        'تعذر تحميل أفضل المنتجات',
+        code: 'report_top_products',
+        exception: e,
+        stackTrace: st,
+        retryable: true,
+      );
+    }
+  }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/settings_repository.dart';
-import '../../../l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class RfidSettingsScreen extends StatefulWidget {
   const RfidSettingsScreen({super.key});
@@ -57,7 +57,7 @@ class _RfidSettingsScreenState extends State<RfidSettingsScreen> {
     await showCupertinoDialog(
       context: context,
       builder: (dialogCtx) {
-        final l = AppLocalizations.of(dialogCtx)!;
+        final l = AppLocalizations.of(dialogCtx);
         return CupertinoAlertDialog(
           title: Text(l.done),
           content: Text(l.rfidSettingsSaved),
@@ -83,7 +83,7 @@ class _RfidSettingsScreenState extends State<RfidSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(middle: Text(l.rfidSettings)),
       child: SafeArea(

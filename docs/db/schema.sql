@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   parent_product_id INTEGER NOT NULL,
   size TEXT,
   color TEXT,
-  sku TEXT NOT NULL,
+  sku TEXT,
   barcode TEXT,
   rfid_tag TEXT,
   cost_price REAL NOT NULL DEFAULT 0,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   FOREIGN KEY (parent_product_id) REFERENCES parent_products(id) ON DELETE CASCADE,
-  UNIQUE(sku),
+  -- UNIQUE(sku) -- removed to allow nullable/duplicate SKUs
   UNIQUE(barcode)
 );
 

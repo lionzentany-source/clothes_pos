@@ -1,4 +1,5 @@
 import 'package:clothes_pos/core/db/database_helper.dart';
+import 'package:clothes_pos/core/logging/app_logger.dart';
 import 'package:clothes_pos/data/models/expense.dart';
 import 'package:clothes_pos/data/models/expense_category.dart';
 
@@ -7,11 +8,17 @@ class ExpenseDao {
   ExpenseDao(this._dbHelper);
 
   Future<List<ExpenseCategory>> listCategories({bool onlyActive = true}) async {
+    AppLogger.d('ExpenseDao.listCategories onlyActive=$onlyActive');
+    final sw = Stopwatch()..start();
     final db = await _dbHelper.database;
     final rows = await db.query(
       'expense_categories',
       where: onlyActive ? 'is_active = 1' : null,
       orderBy: 'name COLLATE NOCASE ASC',
+    );
+    sw.stop();
+    AppLogger.d(
+      'ExpenseDao.listCategories rows=${rows.length} in ${sw.elapsedMilliseconds}ms',
     );
     return rows.map((e) => ExpenseCategory.fromMap(e)).toList();
   }
@@ -65,6 +72,10 @@ class ExpenseDao {
     int limit = 500,
     int offset = 0,
   }) async {
+    AppLogger.d(
+      'ExpenseDao.listExpenses start=$start end=$end cat=$categoryId paidVia=$paidVia limit=$limit offset=$offset',
+    );
+    final sw = Stopwatch()..start();
     final db = await _dbHelper.database;
     final where = <String>[];
     final args = <Object?>[];
@@ -96,7 +107,32 @@ class ExpenseDao {
     ''',
       [...args, limit, offset],
     );
-    return rows.map((e) => Expense.fromMap(e)).toList();
+    sw.stop();
+    AppLogger.d(
+      'ExpenseDao.listExpenses rows=${rows.length} in ${sw.elapsedMilliseconds}ms',
+    );
+    final list = <Expense>[];
+    var rowIndex = 0;
+    for (final r in rows) {
+      try {
+        final rowSw = Stopwatch()..start();
+        list.add(Expense.fromMap(r));
+        rowSw.stop();
+        if (rowSw.elapsedMilliseconds > 50) {
+          AppLogger.w(
+            'ExpenseDao.listExpenses slow row parse idx=$rowIndex took=${rowSw.elapsedMilliseconds}ms',
+          );
+        }
+      } catch (e, st) {
+        AppLogger.e(
+          'ExpenseDao.listExpenses row map failed row=$r',
+          error: e,
+          stackTrace: st,
+        );
+      }
+      rowIndex++;
+    }
+    return list;
   }
 
   Future<double> sumExpenses({
@@ -104,6 +140,8 @@ class ExpenseDao {
     DateTime? end,
     int? categoryId,
   }) async {
+    AppLogger.d('ExpenseDao.sumExpenses start=$start end=$end cat=$categoryId');
+    final sw = Stopwatch()..start();
     final db = await _dbHelper.database;
     final where = <String>[];
     final args = <Object?>[];
@@ -120,17 +158,45 @@ class ExpenseDao {
       args.add(categoryId);
     }
     final whereClause = where.isEmpty ? '' : 'WHERE ${where.join(' AND ')}';
-    final rows = await db.rawQuery(
-      'SELECT SUM(amount) AS total FROM expenses $whereClause',
-      args,
+    List<Map<String, Object?>> rows;
+    try {
+      final future = db.rawQuery(
+        'SELECT COALESCE(SUM(amount),0) AS total FROM expenses $whereClause',
+        args,
+      );
+      rows = await future.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          AppLogger.w(
+            'ExpenseDao.sumExpenses timeout after 5s; returning fallback 0 and will retry async',
+          );
+          return [
+            {'total': 0},
+          ];
+        },
+      );
+    } catch (e, st) {
+      AppLogger.e(
+        'ExpenseDao.sumExpenses query failed',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+    sw.stop();
+    final total = (rows.first['total'] as num?)?.toDouble() ?? 0.0;
+    AppLogger.d(
+      'ExpenseDao.sumExpenses total=$total in ${sw.elapsedMilliseconds}ms',
     );
-    return (rows.first['total'] as num?)?.toDouble() ?? 0.0;
+    return total;
   }
 
   Future<Map<String, double>> sumByCategory({
     DateTime? start,
     DateTime? end,
   }) async {
+    AppLogger.d('ExpenseDao.sumByCategory start=$start end=$end');
+    final sw = Stopwatch()..start();
     final db = await _dbHelper.database;
     final where = <String>[];
     final args = <Object?>[];
@@ -156,6 +222,10 @@ class ExpenseDao {
       map[(r['name'] as String? ?? 'غير مصنف')] =
           (r['total'] as num?)?.toDouble() ?? 0;
     }
+    sw.stop();
+    AppLogger.d(
+      'ExpenseDao.sumByCategory rows=${map.length} in ${sw.elapsedMilliseconds}ms',
+    );
     return map;
   }
 }

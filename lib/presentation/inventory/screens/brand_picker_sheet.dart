@@ -1,6 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/data/models/brand.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class BrandPickerSheet extends StatelessWidget {
   final List<Brand> brands;
@@ -19,7 +19,7 @@ class BrandPickerSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context);
     return CupertinoActionSheet(
-      title: Text(l?.selectAction ?? 'Select'),
+      title: Text(l.selectAction),
       actions: [
         ...brands.map(
           (b) => CupertinoActionSheetAction(
@@ -35,7 +35,7 @@ class BrandPickerSheet extends StatelessWidget {
             Navigator.of(context).pop();
             onAddNew();
           },
-          child: Text(l?.addAction ?? 'Add'),
+          child: Text(l.addAction),
         ),
         if (onClear != null)
           CupertinoActionSheetAction(
@@ -44,13 +44,13 @@ class BrandPickerSheet extends StatelessWidget {
               onClear!.call();
             },
             isDestructiveAction: true,
-            child: Text(l?.clearFilters ?? 'Clear'),
+            child: Text(l.clearFilters),
           ),
       ],
       cancelButton: CupertinoActionSheetAction(
         onPressed: () => Navigator.of(context).pop(),
         isDefaultAction: true,
-        child: Text(l?.cancel ?? 'Cancel'),
+        child: Text(l.cancel),
       ),
     );
   }

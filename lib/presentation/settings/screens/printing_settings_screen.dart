@@ -4,7 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'dart:typed_data';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:clothes_pos/core/printing/system_pdf_printer.dart';
-import '../../../l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class PrintingSettingsScreen extends StatefulWidget {
   const PrintingSettingsScreen({super.key});
@@ -56,7 +56,7 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
         context: context,
         builder: (dialogCtx) {
           // Use the dialog's own BuildContext to avoid referencing a possibly unmounted State context.
-          final l = AppLocalizations.of(dialogCtx)!;
+          final l = AppLocalizations.of(dialogCtx);
           return CupertinoAlertDialog(
             title: Text(l.done),
             content: Text(l.printingSettingsSaved),
@@ -90,7 +90,6 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
   }
 
   Future<Uint8List> _buildTestPdfBytes() async {
-    final l = AppLocalizations.of(context)!;
     final doc = pw.Document();
     doc.addPage(
       pw.Page(
@@ -98,11 +97,9 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
           child: pw.Column(
             mainAxisSize: pw.MainAxisSize.min,
             children: [
-              pw.Text(l.testPrintTitle, style: pw.TextStyle(fontSize: 24)),
+              pw.Text('صفحة اختبار الطباعة', style: pw.TextStyle(fontSize: 24)),
               pw.SizedBox(height: 12),
-              pw.Text(l.testPrintIntro),
-              pw.SizedBox(height: 6),
-              pw.Text(l.printTestPageMessage),
+              pw.Text('إذا ظهرت هذه الصفحة، فالطباعة تعمل.'),
             ],
           ),
         ),
@@ -122,7 +119,7 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(middle: Text(l.printingSettings)),
       child: SafeArea(
@@ -209,10 +206,7 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
                         : () async {
                             // Generate a small test PDF and print via SystemPdfPrinter
                             final docBytes = await _buildTestPdfBytes();
-                            await SystemPdfPrinter().printPdfBytes(
-                              docBytes,
-                              context: context,
-                            );
+                            await SystemPdfPrinter().printPdfBytes(docBytes);
                           },
                     child: Text(l.testPrinter),
                   ),

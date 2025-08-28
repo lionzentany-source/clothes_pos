@@ -7,10 +7,12 @@ import 'package:clothes_pos/data/repositories/brand_repository.dart';
 import 'package:clothes_pos/data/models/brand.dart';
 import 'brand_picker_sheet.dart';
 import 'package:clothes_pos/core/di/locator.dart';
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+
 import 'package:clothes_pos/presentation/purchases/screens/purchase_editor_screen.dart';
 import 'package:clothes_pos/presentation/purchases/screens/purchase_history_screen.dart';
 
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
@@ -51,7 +53,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthCubit>().state.user;
-    final perms = auth?.permissions ?? const [];
+    final perms = auth?.permissions ?? const <String>[];
     final canAdjust = perms.contains(AppPermissions.adjustStock);
     final canPurchase = perms.contains(AppPermissions.performPurchases);
     final canAddProduct =
@@ -63,11 +65,10 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
         ),
         slivers: [
           CupertinoSliverNavigationBar(
-            largeTitle: Text(
-              AppLocalizations.of(context)?.inventoryTab ?? 'Inventory',
-            ),
-            trailing: CupertinoButton(
-              padding: EdgeInsets.zero,
+            largeTitle: Text(AppLocalizations.of(context).inventoryTab),
+            transitionBetweenRoutes: false,
+            trailing: ActionButton(
+              label: AppLocalizations.of(context).addAction,
               onPressed: !(canAddProduct || canPurchase)
                   ? null
                   : () async {
@@ -93,7 +94,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                                   if (!mounted) return;
                                   if (refreshed == true) cubit.load(query: q);
                                 },
-                                child: Text(l?.addItem ?? 'Add Product'),
+                                child: Text(l.addItem),
                               ),
                             );
                           }
@@ -114,9 +115,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                                   if (!mounted) return;
                                   if (refreshed == true) cubit.load(query: q);
                                 },
-                                child: Text(
-                                  l?.purchaseInvoiceTitle ?? 'Purchase Invoice',
-                                ),
+                                child: Text(l.purchaseInvoiceTitle),
                               ),
                             );
                           }
@@ -131,35 +130,27 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                                   ),
                                 );
                               },
-                              child: Text(
-                                l?.purchasesTotalPeriod ?? 'Purchases',
-                              ),
+                              child: Text(l.purchasesTotalPeriod),
                             ),
                           );
                           return CupertinoActionSheet(
-                            title: Text(l?.addAction ?? 'Add'),
+                            title: Text(l.addAction),
                             message: !(canAddProduct || canPurchase)
-                                ? Text(
-                                    (l?.viewOnlyAdjustStock ??
-                                        'View only: no permission to adjust stock'),
+                                ? const Text(
+                                    'عرض فقط: لا تملك صلاحيات الإضافة',
+                                    textDirection: TextDirection.rtl,
                                   )
                                 : null,
                             actions: actions,
                             cancelButton: CupertinoActionSheetAction(
                               onPressed: () => Navigator.of(sheetCtx).pop(),
                               isDefaultAction: true,
-                              child: Text(l?.cancel ?? 'Cancel'),
+                              child: Text(l.cancel),
                             ),
                           );
                         },
                       );
                     },
-              child: Icon(
-                CupertinoIcons.add,
-                color: (canAddProduct || canPurchase)
-                    ? CupertinoColors.activeBlue
-                    : CupertinoColors.inactiveGray,
-              ),
             ),
           ),
           SliverSafeArea(
@@ -167,11 +158,9 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 if (!canAdjust)
-                  ViewOnlyBanner(
-                    message:
-                        AppLocalizations.of(context)?.viewOnlyAdjustStock ??
-                        'عرض فقط: لا تملك صلاحية تعديل المخزون',
-                    margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                  const ViewOnlyBanner(
+                    message: 'عرض فقط: لا تملك صلاحية تعديل المخزون',
+                    margin: EdgeInsets.fromLTRB(12, 8, 12, 4),
                   ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(8, 8, 8, 4),
@@ -181,11 +170,9 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                       query: v,
                       brandId: context.read<InventoryCubit>().state.brandId,
                     ),
-                    placeholder:
-                        AppLocalizations.of(
-                          context,
-                        )?.searchProductsPlaceholder ??
-                        'Search products...',
+                    placeholder: AppLocalizations.of(
+                      context,
+                    ).searchProductPlaceholder,
                   ),
                 ),
                 Padding(
@@ -230,8 +217,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                         const SizedBox(width: 6),
                         Text(
                           _selectedBrand?.name ??
-                              (AppLocalizations.of(context)?.select ??
-                                  'Select'),
+                              (AppLocalizations.of(context).selectAction),
                           style: const TextStyle(fontSize: 14),
                         ),
                       ],
@@ -250,10 +236,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                       return Padding(
                         padding: const EdgeInsets.all(32),
                         child: Center(
-                          child: Text(
-                            AppLocalizations.of(context)?.notFound ??
-                                'Not Found',
-                          ),
+                          child: Text(AppLocalizations.of(context).notFound),
                         ),
                       );
                     }
@@ -315,14 +298,13 @@ class _InventoryRow extends StatelessWidget {
     final l = AppLocalizations.of(context);
     final subtitle = [
       if (brand != null && brand.trim().isNotEmpty) brand,
-      if ((v.size ?? '').isNotEmpty) '${l?.sizeLabel ?? 'Size:'} ${v.size}',
-      if ((v.color ?? '').isNotEmpty) '${l?.colorLabel ?? 'Color:'} ${v.color}',
-      '${l?.skuLabel ?? 'SKU:'} ${v.sku}',
-      if ((v.barcode ?? '').isNotEmpty)
-        '${l?.barcodeLabel ?? 'Barcode:'} ${v.barcode}',
+      if ((v.size ?? '').isNotEmpty) '${l.sizeLabel} ${v.size}',
+      if ((v.color ?? '').isNotEmpty) '${l.colorLabel} ${v.color}',
+      '${l.skuLabel} ${v.sku ?? ''}',
+      if ((v.barcode ?? '').isNotEmpty) '${l.barcodeLabel} ${v.barcode}',
     ].join('  •  ');
     final qty =
-        '${l?.quantityLabel ?? 'Qty:'} ${v.quantity} — ${l?.priceLabel ?? 'Price:'} ${money(context, v.salePrice)}';
+        '${l.quantityLabel} ${v.quantity} — ${l.priceLabel} ${money(context, v.salePrice)}';
     final style = row.isLowStock
         ? const TextStyle(color: CupertinoColors.systemRed)
         : const TextStyle(color: CupertinoColors.label);

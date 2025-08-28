@@ -1,5 +1,6 @@
 -- RFID multi-tag support
 -- New table to store multiple RFID EPCs per product variant
+BEGIN TRANSACTION;
 
 CREATE TABLE IF NOT EXISTS product_variant_rfids (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -16,4 +17,7 @@ INSERT OR IGNORE INTO product_variant_rfids(variant_id, epc)
 SELECT id AS variant_id, rfid_tag AS epc
 FROM product_variants
 WHERE rfid_tag IS NOT NULL AND rfid_tag <> '';
+
+COMMIT;
+
 

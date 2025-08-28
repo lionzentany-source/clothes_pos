@@ -45,5 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+		<!-- Speech recognition & microphone permissions -->
+		<key>NSSpeechRecognitionUsageDescription</key>
+		<string>يحتاج التطبيق للوصول للتعرف على الكلام لتشغيل المساعد التدريبي.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>يحتاج التطبيق للوصول إلى الميكروفون لتسجيل صوتك للمساعد التدريبي.</string>
 </dict>
 </plist>

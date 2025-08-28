@@ -45,11 +45,24 @@ class ReturnsDao {
   }) async {
     final db = await _dbHelper.database;
     return db.transaction<int>((txn) async {
-      // Validate quantities
-      final remaining = await getReturnableItems(saleId);
+      // Validate quantities (use the same transaction for reads)
+      final remainingRows = await txn.rawQuery('''
+        SELECT
+          si.id AS sale_item_id,
+          (si.quantity - COALESCE(r.ret_qty, 0)) AS remaining_qty
+        FROM sale_items si
+        LEFT JOIN (
+          SELECT sri.sale_item_id, SUM(sri.quantity) AS ret_qty
+          FROM sales_return_items sri
+          INNER JOIN sales_returns sr ON sr.id = sri.sales_return_id
+          WHERE sr.sale_id = ?
+          GROUP BY sri.sale_item_id
+        ) r ON r.sale_item_id = si.id
+        WHERE si.sale_id = ?
+      ''', [saleId, saleId]);
       final remainingMap = <int, int>{}; // sale_item_id -> remaining
-      for (final r in remaining) {
-        remainingMap[r['sale_item_id'] as int] = r['remaining_qty'] as int;
+      for (final r in remainingRows) {
+        remainingMap[r['sale_item_id'] as int] = (r['remaining_qty'] as num).toInt();
       }
       for (final it in items) {
         final rem = remainingMap[it.saleItemId] ?? 0;

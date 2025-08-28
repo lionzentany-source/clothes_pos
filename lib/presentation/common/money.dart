@@ -8,7 +8,7 @@ String money(BuildContext context, double amount) {
   return CurrencyFormatter.format(
     amount,
     currency: st.currency,
-    locale: st.localeCode,
+    // Arabic-only locale fixed.
+    locale: 'ar',
   );
 }
-

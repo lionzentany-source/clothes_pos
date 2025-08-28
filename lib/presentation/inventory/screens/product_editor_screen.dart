@@ -9,8 +9,9 @@ import 'package:clothes_pos/data/repositories/category_repository.dart';
 import 'package:clothes_pos/data/repositories/supplier_repository.dart';
 import 'package:clothes_pos/data/repositories/brand_repository.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
 import 'package:clothes_pos/presentation/common/widgets/app_labeled_field.dart';
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 
 class ProductEditorScreen extends StatefulWidget {
   final int? parentId; // null => create, otherwise edit existing
@@ -61,14 +62,7 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
     final distinctSizes = await _repo.distinctSizes(limit: 100);
     final distinctColors = await _repo.distinctColors(limit: 100);
     const seedSizes = ['S', 'M', 'L', 'XL', 'XXL'];
-    final l = AppLocalizations.of(context);
-    final seedColors = [
-      l?.colorBlack ?? 'Black',
-      l?.colorWhite ?? 'White',
-      l?.colorBlue ?? 'Blue',
-      l?.colorRed ?? 'Red',
-      l?.colorGreen ?? 'Green',
-    ];
+    const seedColors = ['أسود', 'أبيض', 'أزرق', 'أحمر', 'أخضر'];
     _sizeSuggestions = {
       ...seedSizes,
       ...distinctSizes.where((e) => e.trim().isNotEmpty),
@@ -131,14 +125,13 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
 
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
-    final l = AppLocalizations.of(context);
     if (name.isEmpty) {
-      _showError(l?.requiredNameError ?? 'الاسم مطلوب');
+      _showError('الاسم مطلوب');
       return;
     }
     final categoryId = _selectedCategory?.id;
     if (categoryId == null) {
-      _showError(l?.selectCategoryError ?? 'يجب اختيار الفئة');
+      _showError('يجب اختيار الفئة');
       return;
     }
     final supplierId = _selectedSupplier?.id;
@@ -147,11 +140,8 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
     // Build variants
     final builtVariants = <ProductVariant>[];
     for (final m in _variants) {
-      final sku = m.sku.text.trim();
-      if (sku.isEmpty) {
-        _showError(l?.skuRequiredVariant ?? 'SKU مطلوب لكل متغير');
-        return;
-      }
+      final skuText = m.sku.text.trim();
+      final sku = skuText.isEmpty ? null : skuText;
       final cost =
           double.tryParse(
             m.cost.text.trim() == '' ? '0' : m.cost.text.trim(),
@@ -205,8 +195,9 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
-      final l = AppLocalizations.of(context);
-      _showError(l == null ? 'فشل الحفظ: $e' : l.saveFailed(e));
+      if (!mounted) return;
+      final friendly = SqlErrorHelper.toArabicMessage(e);
+      _showError(friendly);
     }
   }
 
@@ -219,17 +210,17 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
   }
 
   void _showError(String msg) {
-    final l = AppLocalizations.of(context);
+    if (!mounted) return;
     showCupertinoDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
-        title: Text(l?.error ?? 'خطأ'),
+      builder: (dialogCtx) => CupertinoAlertDialog(
+        title: const Text('خطأ'),
         content: Text(msg),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: Text(l?.ok ?? 'حسنًا'),
-            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('حسنًا'),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
         ],
       ),
@@ -239,79 +230,51 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      final l = AppLocalizations.of(context);
-      return CupertinoPageScaffold(
-        navigationBar: CupertinoNavigationBar(
-          middle: Text(l?.productEditorTitle ?? 'محرر المنتج'),
-        ),
-        child: const Center(child: CupertinoActivityIndicator()),
+      return const CupertinoPageScaffold(
+        navigationBar: CupertinoNavigationBar(middle: Text('محرر المنتج')),
+        child: Center(child: CupertinoActivityIndicator()),
       );
     }
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(
-          AppLocalizations.of(context)?.productEditorTitle ?? 'محرر المنتج',
-        ),
+        middle: const Text('محرر المنتج'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: _save,
-          child: Text(AppLocalizations.of(context)?.save ?? 'حفظ'),
+          child: const Text('حفظ'),
         ),
       ),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(vertical: 8),
           children: [
-            _SectionTitle(
-              AppLocalizations.of(context)?.productDataSection ??
-                  'بيانات المنتج',
-            ),
+            const _SectionTitle('بيانات المنتج'),
             AppLabeledField(
-              label: AppLocalizations.of(context)?.nameLabel ?? 'الاسم',
+              label: 'الاسم',
               controller: _nameCtrl,
-              placeholder:
-                  AppLocalizations.of(context)?.productNamePlaceholder ??
-                  'اسم المنتج',
+              placeholder: 'اسم المنتج',
             ),
             AppLabeledField(
-              label: AppLocalizations.of(context)?.descriptionLabel ?? 'الوصف',
+              label: 'الوصف',
               controller: _descCtrl,
-              placeholder:
-                  AppLocalizations.of(context)?.productDescPlaceholder ??
-                  'وصف (اختياري)',
+              placeholder: 'وصف (اختياري)',
             ),
             _PickerTile(
-              label: AppLocalizations.of(context)?.categoryLabel ?? 'الفئة',
-              value:
-                  _selectedCategory?.name ??
-                  (AppLocalizations.of(context)?.chooseCategoryPlaceholder ??
-                      'اختر الفئة'),
+              label: 'الفئة',
+              value: _selectedCategory?.name ?? 'اختر الفئة',
               onTap: _pickCategory,
             ),
             _PickerTile(
-              label:
-                  AppLocalizations.of(context)?.supplierLabelOptional ??
-                  'المورد (اختياري)',
-              value:
-                  _selectedSupplier?.name ??
-                  (AppLocalizations.of(context)?.pickSupplierTitle ??
-                      'اختر المورد'),
+              label: 'المورد (اختياري)',
+              value: _selectedSupplier?.name ?? 'اختر المورد',
               onTap: _pickSupplier,
             ),
             _PickerTile(
-              label:
-                  AppLocalizations.of(context)?.brandLabelOptional ??
-                  'العلامة التجارية (اختياري)',
-              value:
-                  _selectedBrand?.name ??
-                  (AppLocalizations.of(context)?.pickBrandTitle ??
-                      'اختر العلامة التجارية'),
+              label: 'العلامة التجارية (اختياري)',
+              value: _selectedBrand?.name ?? 'اختر العلامة التجارية',
               onTap: _pickBrand,
             ),
-            _SectionTitle(
-              AppLocalizations.of(context)?.variantsSection ??
-                  'المتغيرات (مقاس/لون/سعر/كمية)',
-            ),
+            const _SectionTitle('المتغيرات (مقاس/لون/سعر/كمية)'),
             for (int i = 0; i < _variants.length; i++)
               _VariantEditor(
                 model: _variants[i],
@@ -321,13 +284,7 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
               ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: CupertinoButton(
-                onPressed: _addVariant,
-                color: CupertinoColors.activeBlue,
-                child: Text(
-                  AppLocalizations.of(context)?.addVariant ?? 'إضافة متغير',
-                ),
-              ),
+              child: ActionButton(onPressed: _addVariant, label: 'إضافة متغير'),
             ),
             const SizedBox(height: 40),
           ],
@@ -338,15 +295,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
 
   Future<void> _pickCategory() async {
     await _showSelectionSheet<Category>(
-      title: AppLocalizations.of(context)?.pickCategoryTitle ?? 'اختر الفئة',
+      title: 'اختر الفئة',
       items: _categories,
       getLabel: (c) => c.name,
       onAddNew: () async {
-        final l = AppLocalizations.of(context);
-        final name = await _promptText(
-          l?.addCategoryTitle ?? 'إضافة فئة جديدة',
-          l?.categoryNamePlaceholder ?? 'اسم الفئة',
-        );
+        final name = await _promptText('إضافة فئة جديدة', 'اسم الفئة');
         if (name != null && name.trim().isNotEmpty) {
           final id = await _categoryRepo.create(name.trim());
           final cat = Category(id: id, name: name.trim());
@@ -362,15 +315,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
 
   Future<void> _pickSupplier() async {
     await _showSelectionSheet<Supplier>(
-      title: AppLocalizations.of(context)?.pickSupplierTitle ?? 'اختر المورد',
+      title: 'اختر المورد',
       items: _suppliers,
       getLabel: (s) => s.name,
       onAddNew: () async {
-        final l = AppLocalizations.of(context);
-        final name = await _promptText(
-          l?.addSupplierTitle ?? 'إضافة مورد جديد',
-          l?.supplierNamePlaceholder ?? 'اسم المورد',
-        );
+        final name = await _promptText('إضافة مورد جديد', 'اسم المورد');
         if (name != null && name.trim().isNotEmpty) {
           final id = await _supplierRepo.create(name.trim());
           final supplier = Supplier(id: id, name: name.trim());
@@ -388,17 +337,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
 
   Future<void> _pickBrand() async {
     await _showSelectionSheet<Brand>(
-      title:
-          AppLocalizations.of(context)?.pickBrandTitle ??
-          'اختر العلامة التجارية',
+      title: 'اختر العلامة التجارية',
       items: _brands,
       getLabel: (b) => b.name,
       onAddNew: () async {
-        final l = AppLocalizations.of(context);
-        final name = await _promptText(
-          l?.addBrandTitle ?? 'إضافة علامة تجارية',
-          l?.brandNamePlaceholder ?? 'اسم العلامة',
-        );
+        final name = await _promptText('إضافة علامة تجارية', 'اسم العلامة');
         if (name != null && name.trim().isNotEmpty) {
           final id = await _brandRepo.create(name.trim());
           final brand = Brand(id: id, name: name.trim());
@@ -416,15 +359,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
 
   Future<void> _pickSize(_VariantEditModel model) async {
     await _showStringSheet(
-      title: AppLocalizations.of(context)?.pickSizeTitle ?? 'اختر المقاس',
+      title: 'اختر المقاس',
       suggestions: _sizeSuggestions,
       current: model.size.text,
       onAddNew: () async {
-        final l = AppLocalizations.of(context);
-        final v = await _promptText(
-          l?.addSizeTitle ?? 'إضافة مقاس',
-          l?.sizeExamplePlaceholder ?? 'مثال: XXL',
-        );
+        final v = await _promptText('إضافة مقاس', 'مثال: XXL');
         if (v != null && v.trim().isNotEmpty) {
           setState(() {
             if (!_sizeSuggestions.contains(v.trim())) {
@@ -442,15 +381,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
 
   Future<void> _pickColor(_VariantEditModel model) async {
     await _showStringSheet(
-      title: AppLocalizations.of(context)?.pickColorTitle ?? 'اختر اللون',
+      title: 'اختر اللون',
       suggestions: _colorSuggestions,
       current: model.color.text,
       onAddNew: () async {
-        final l = AppLocalizations.of(context);
-        final v = await _promptText(
-          l?.addColorTitle ?? 'إضافة لون',
-          l?.colorExamplePlaceholder ?? 'مثال: بنفسجي',
-        );
+        final v = await _promptText('إضافة لون', 'مثال: بنفسجي');
         if (v != null && v.trim().isNotEmpty) {
           setState(() {
             if (!_colorSuggestions.contains(v.trim())) {
@@ -471,7 +406,6 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
     return showCupertinoDialog<String?>(
       context: context,
       builder: (dialogCtx) {
-        final l = AppLocalizations.of(dialogCtx);
         return CupertinoAlertDialog(
           title: Text(title, textDirection: TextDirection.rtl),
           content: Column(
@@ -486,12 +420,12 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
           ),
           actions: [
             CupertinoDialogAction(
-              child: Text(l?.cancel ?? 'إلغاء'),
+              child: const Text('إلغاء'),
               onPressed: () => Navigator.of(dialogCtx).pop(null),
             ),
             CupertinoDialogAction(
               isDefaultAction: true,
-              child: Text(l?.save ?? 'حفظ'),
+              child: const Text('حفظ'),
               onPressed: () => Navigator.of(dialogCtx).pop(ctrl.text.trim()),
             ),
           ],
@@ -521,9 +455,7 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
                   Navigator.of(ctx).pop();
                   onClear?.call();
                 },
-                child: Text(
-                  AppLocalizations.of(context)?.clearValue ?? 'مسح القيمة',
-                ),
+                child: const Text('مسح القيمة'),
               ),
             ...suggestions.map(
               (s) => CupertinoButton(
@@ -539,11 +471,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
                 Navigator.of(ctx).pop();
                 onAddNew();
               },
-              child: Text(AppLocalizations.of(context)?.addNew ?? 'إضافة جديد'),
+              child: const Text('إضافة جديد'),
             ),
             CupertinoButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(AppLocalizations.of(context)?.cancel ?? 'إلغاء'),
+              child: const Text('إلغاء'),
             ),
           ],
         );
@@ -571,9 +503,7 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
                 Navigator.of(ctx).pop();
                 onClear?.call();
               },
-              child: Text(
-                AppLocalizations.of(context)?.clearSelection ?? 'مسح الاختيار',
-              ),
+              child: const Text('مسح الاختيار'),
             ),
           ...items.map(
             (e) => CupertinoButton(
@@ -589,11 +519,11 @@ class _ProductEditorScreenState extends State<ProductEditorScreen> {
               Navigator.of(ctx).pop();
               onAddNew();
             },
-            child: Text(AppLocalizations.of(context)?.addNew ?? 'إضافة جديد'),
+            child: const Text('إضافة جديد'),
           ),
           CupertinoButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(AppLocalizations.of(context)?.cancel ?? 'إلغاء'),
+            child: const Text('إلغاء'),
           ),
         ],
       ),
@@ -656,7 +586,7 @@ class _VariantEditModel {
     id: v.id,
     size: TextEditingController(text: v.size ?? ''),
     color: TextEditingController(text: v.color ?? ''),
-    sku: TextEditingController(text: v.sku),
+    sku: TextEditingController(text: v.sku ?? ''),
     barcode: TextEditingController(text: v.barcode ?? ''),
     cost: TextEditingController(text: v.costPrice.toString()),
     sale: TextEditingController(text: v.salePrice.toString()),
@@ -703,24 +633,18 @@ class _VariantEditor extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                AppLocalizations.of(context)?.variantLabel ?? 'Variant',
-                textDirection: TextDirection.rtl,
-              ),
+              const Text('متغير', textDirection: TextDirection.rtl),
               CupertinoButton(
                 padding: EdgeInsets.zero,
                 onPressed: onRemove,
-                child: Text(
-                  AppLocalizations.of(context)?.delete ?? 'Delete',
-                  textDirection: TextDirection.rtl,
-                ),
+                child: const Text('حذف'),
               ),
             ],
           ),
           _TwoFieldsRow(
-            leftLabel: AppLocalizations.of(context)?.sizeLabel ?? 'Size',
+            leftLabel: 'المقاس',
             left: model.size,
-            rightLabel: AppLocalizations.of(context)?.colorLabel ?? 'Color',
+            rightLabel: 'اللون',
             right: model.color,
             leftTrailing: AppInlineIconButton(
               icon: CupertinoIcons.search,
@@ -742,17 +666,16 @@ class _VariantEditor extends StatelessWidget {
             ),
           ),
           _TwoFieldsRow(
-            leftLabel: AppLocalizations.of(context)?.costLabel ?? 'Cost',
+            leftLabel: 'التكلفة',
             left: model.cost,
-            rightLabel: AppLocalizations.of(context)?.saleLabel ?? 'Sale',
+            rightLabel: 'البيع',
             right: model.sale,
             keyboardType: TextInputType.number,
           ),
           _TwoFieldsRow(
-            leftLabel: AppLocalizations.of(context)?.quantityLabel ?? 'Qty',
+            leftLabel: 'الكمية',
             left: model.qty,
-            rightLabel:
-                AppLocalizations.of(context)?.reorderPointLabel ?? 'Reorder',
+            rightLabel: 'حد إعادة الطلب',
             right: model.reorder,
             keyboardType: TextInputType.number,
           ),

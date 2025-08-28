@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/core/hardware/uhf/models.dart';
+import 'package:clothes_pos/core/logging/app_logger.dart';
 
 /// Bridge implementation: launches external 32-bit helper that talks to the
 /// real 32-bit DLL and streams EPC codes over stdout as JSON lines.
@@ -52,8 +53,7 @@ class UHFReaderBridgeProcess implements UHFReader {
         throw Exception('bridge executable not found at: $executablePath');
       }
       // Log launch
-      // ignore: avoid_print
-      print('[UHF] launching bridge at $executablePath');
+      AppLogger.i('UHF launching bridge at $executablePath');
       _proc = await Process.start(
         executablePath,
         const <String>[],
@@ -70,8 +70,12 @@ class UHFReaderBridgeProcess implements UHFReader {
         .listen(
           _handleLine,
           onError: (e, st) {
-            _controller.addError(e, st);
-            _errorsController.add(e);
+            if (!_controller.isClosed) {
+              _controller.addError(e, st);
+            }
+            if (!_errorsController.isClosed) {
+              _errorsController.add(e);
+            }
           },
           onDone: () {
             _status = UHFStatus.unavailable;
@@ -93,19 +97,19 @@ class UHFReaderBridgeProcess implements UHFReader {
         final ex = Exception('Bridge process exited unexpectedly (code=$code)');
         _controller.addError(ex);
         _errorsController.add(ex);
+        AppLogger.e('UHF bridge exited', error: ex);
       }
     });
 
-    // Wait for ready handshake (max 3s)
+    // Wait for ready handshake (max 10s)
     try {
       await _readyCompleter!.future.timeout(
-        const Duration(seconds: 3),
+        const Duration(seconds: 10),
         onTimeout: () {
-          throw TimeoutException('Bridge ready timeout (3s)');
+          throw TimeoutException('Bridge ready timeout (10s)');
         },
       );
-      // ignore: avoid_print
-      print('[UHF] bridge ready');
+      AppLogger.i('UHF bridge ready');
     } catch (e) {
       _proc?.kill(ProcessSignal.sigkill);
       _proc = null;
@@ -139,14 +143,22 @@ class UHFReaderBridgeProcess implements UHFReader {
           if (_readyCompleter != null && !_readyCompleter!.isCompleted) {
             _readyCompleter!.completeError(Exception(msg));
           }
-          _controller.addError(Exception(msg));
-          _errorsController.add(Exception(msg));
+          if (!_controller.isClosed) {
+            _controller.addError(Exception(msg));
+          }
+          if (!_errorsController.isClosed) {
+            _errorsController.add(Exception(msg));
+          }
           _status = UHFStatus.unavailable;
           break;
       }
     } catch (e) {
-      _controller.addError(Exception('Parse line failed: $line -> $e'));
-      _errorsController.add(e);
+      if (!_controller.isClosed) {
+        _controller.addError(Exception('Parse line failed: $line -> $e'));
+      }
+      if (!_errorsController.isClosed) {
+        _errorsController.add(e);
+      }
     }
   }
 

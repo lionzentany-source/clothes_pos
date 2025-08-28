@@ -6,6 +6,7 @@ import 'package:clothes_pos/data/models/sale_item.dart';
 class SalesDao {
   final DatabaseHelper _dbHelper;
   SalesDao(this._dbHelper);
+  SalesDao.throwing() : _dbHelper = throw UnimplementedError();
 
   Future<int> createSale({
     required Sale sale,

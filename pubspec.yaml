@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  speech_to_text: ^7.3.0
   flutter_localizations:
     sdk: flutter
 
@@ -54,8 +55,9 @@ dependencies:
   ffi: ^2.1.4
   sqflite_common_ffi: ^2.3.6
   flutter_svg: ^2.0.10+1
-  speech_to_text: ^7.3.0
+  google_speech: ^2.2.0
   flutter_tts: ^4.2.3
+  record: ^6.1.0
 
 dev_dependencies:
   flutter_test:

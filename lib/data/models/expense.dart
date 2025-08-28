@@ -21,19 +21,73 @@ class Expense {
     this.categoryName,
   });
 
-  factory Expense.fromMap(Map<String, Object?> m) => Expense(
-    id: m['id'] as int?,
-    categoryId: m['category_id'] as int,
-    amount: (m['amount'] as num).toDouble(),
-    paidVia: m['paid_via'] as String,
-    cashSessionId: m['cash_session_id'] as int?,
-    date: DateTime.parse(m['date'] as String),
-    description: m['description'] as String?,
-    createdAt: m['created_at'] != null
-        ? DateTime.tryParse(m['created_at'] as String)
-        : null,
-    categoryName: m['category_name'] as String?,
-  );
+  /// Safe parsing that tolerates bad / legacy data and prevents crashes.
+  factory Expense.fromMap(Map<String, Object?> m) {
+    // id
+    final dynamic rawId = m['id'];
+    final int? id = rawId is int
+        ? rawId
+        : (rawId is String ? int.tryParse(rawId) : null);
+
+    // category id (required)
+    final dynamic catRaw = m['category_id'];
+    final int categoryId = catRaw is int
+        ? catRaw
+        : (catRaw is String ? int.tryParse(catRaw) ?? 0 : 0);
+
+    // amount
+    final dynamic amtRaw = m['amount'];
+    double amount;
+    if (amtRaw is num) {
+      amount = amtRaw.toDouble();
+    } else if (amtRaw is String) {
+      amount = double.tryParse(amtRaw) ?? 0;
+    } else {
+      amount = 0;
+    }
+
+    // paid via
+    final pvRaw = m['paid_via'];
+    final paidVia = (pvRaw is String && pvRaw.isNotEmpty) ? pvRaw : 'other';
+
+    // cash session
+    final csRaw = m['cash_session_id'];
+    final int? cashSessionId = csRaw is int
+        ? csRaw
+        : (csRaw is String ? int.tryParse(csRaw) : null);
+
+    // date
+    final dateRaw = m['date'];
+    DateTime date = DateTime.now();
+    if (dateRaw is String) {
+      date =
+          DateTime.tryParse(dateRaw) ??
+          DateTime.tryParse(dateRaw.replaceFirst(' ', 'T')) ??
+          date;
+    }
+
+    // created at
+    DateTime? createdAt;
+    final createdRaw = m['created_at'];
+    if (createdRaw is String) {
+      createdAt = DateTime.tryParse(createdRaw);
+    }
+
+    final description = m['description'] as String?;
+    final categoryName = m['category_name'] as String?;
+
+    return Expense(
+      id: id,
+      categoryId: categoryId,
+      amount: amount,
+      paidVia: paidVia,
+      cashSessionId: cashSessionId,
+      date: date,
+      description: description,
+      createdAt: createdAt,
+      categoryName: categoryName,
+    );
+  }
 
   Map<String, Object?> toMap() => {
     if (id != null) 'id': id,

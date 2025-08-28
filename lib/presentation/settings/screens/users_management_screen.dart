@@ -1,11 +1,15 @@
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/users_repository.dart';
 import 'package:clothes_pos/data/models/user.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:flutter/cupertino.dart' hide CupertinoListTile;
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+import 'package:clothes_pos/presentation/common/widgets/cupertino_list_tile_stub.dart';
+
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
 
 class UsersManagementScreen extends StatefulWidget {
   const UsersManagementScreen({super.key});
@@ -37,7 +41,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
   }
 
   Future<void> _showAddUserDialog() async {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     final usernameCtrl = TextEditingController();
     final fullNameCtrl = TextEditingController();
     final passwordCtrl = TextEditingController();
@@ -53,12 +57,12 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
               children: [
                 const SizedBox(height: 8),
                 CupertinoTextField(
-                  placeholder: l.userNamePlaceholder,
+                  placeholder: 'اسم المستخدم',
                   controller: usernameCtrl,
                 ),
                 const SizedBox(height: 8),
                 CupertinoTextField(
-                  placeholder: l.fullNamePlaceholder,
+                  placeholder: 'الاسم الكامل',
                   controller: fullNameCtrl,
                 ),
                 const SizedBox(height: 8),
@@ -66,12 +70,14 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                   placeholder: l.loginEnterPassword,
                   controller: passwordCtrl,
                   obscureText: true,
+                  style: const TextStyle(color: CupertinoColors.label),
+                  placeholderStyle: const TextStyle(
+                    color: CupertinoColors.systemGrey,
+                  ),
+                  obscuringCharacter: '•',
                 ),
                 const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(l.rolesLabel),
-                ),
+                Align(alignment: Alignment.centerLeft, child: Text('الأدوار')),
                 SizedBox(
                   height: 120,
                   child: CupertinoScrollbar(
@@ -110,18 +116,36 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                   final u = usernameCtrl.text.trim();
                   final p = passwordCtrl.text.trim();
                   if (u.isEmpty || p.length < 4) return;
-                  await _repo.createUser(
-                    username: u,
-                    fullName: fullNameCtrl.text.trim().isEmpty
-                        ? null
-                        : fullNameCtrl.text.trim(),
-                    password: p,
-                    roleIds: selectedRoles.toList(),
-                  );
-                  if (!mounted) return;
-                  Navigator.of(ctx).pop();
-                  setState(() => _loading = true);
-                  await _load();
+                  try {
+                    await _repo.createUser(
+                      username: u,
+                      fullName: fullNameCtrl.text.trim().isEmpty
+                          ? null
+                          : fullNameCtrl.text.trim(),
+                      password: p,
+                      roleIds: selectedRoles.toList(),
+                    );
+                    if (!mounted || !ctx.mounted) return;
+                    Navigator.of(ctx).pop();
+                    setState(() => _loading = true);
+                    await _load();
+                  } catch (e) {
+                    if (!mounted || !ctx.mounted) return;
+                    final friendly = SqlErrorHelper.toArabicMessage(e);
+                    await showCupertinoDialog(
+                      context: ctx,
+                      builder: (_) => CupertinoAlertDialog(
+                        title: Text(AppLocalizations.of(ctx).error),
+                        content: Text(friendly),
+                        actions: [
+                          CupertinoDialogAction(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: Text(AppLocalizations.of(ctx).ok),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
                 },
                 child: Text(l.save),
               ),
@@ -133,7 +157,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
   }
 
   Future<void> _changePassword(int userId) async {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     await showCupertinoDialog(
       context: context,
@@ -143,6 +167,9 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
           placeholder: l.loginEnterPassword,
           controller: ctrl,
           obscureText: true,
+          style: const TextStyle(color: CupertinoColors.label),
+          placeholderStyle: const TextStyle(color: CupertinoColors.systemGrey),
+          obscuringCharacter: '•',
         ),
         actions: [
           CupertinoDialogAction(
@@ -154,9 +181,26 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
             onPressed: () async {
               final p = ctrl.text.trim();
               if (p.length < 4) return;
-              await _repo.changePassword(userId, p);
-              if (!mounted) return;
-              Navigator.of(ctx).pop();
+              try {
+                await _repo.changePassword(userId, p);
+                if (!mounted || !ctx.mounted) return;
+                Navigator.of(ctx).pop();
+              } catch (e) {
+                final friendly = SqlErrorHelper.toArabicMessage(e);
+                await showCupertinoDialog(
+                  context: ctx,
+                  builder: (_) => CupertinoAlertDialog(
+                    title: Text(AppLocalizations.of(context).error),
+                    content: Text(friendly),
+                    actions: [
+                      CupertinoDialogAction(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: Text(AppLocalizations.of(context).ok),
+                      ),
+                    ],
+                  ),
+                );
+              }
             },
             child: Text(l.save),
           ),
@@ -168,11 +212,12 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
   Future<void> _editRoles(int userId) async {
     final current = await _repo.getUserRoleIds(userId);
     final selected = current.toSet();
+    if (!mounted || !context.mounted) return;
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => CupertinoAlertDialog(
-          title: Text(AppLocalizations.of(context)!.rolesLabel),
+          title: const Text('الأدوار'),
           content: SizedBox(
             height: 200,
             child: CupertinoScrollbar(
@@ -201,16 +246,33 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(AppLocalizations.of(context)!.cancel),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () async {
-                await _repo.setUserRoles(userId, selected.toList());
-                if (!mounted) return;
-                Navigator.of(ctx).pop();
+                try {
+                  await _repo.setUserRoles(userId, selected.toList());
+                  if (!mounted || !ctx.mounted) return;
+                  Navigator.of(ctx).pop();
+                } catch (e) {
+                  final friendly = SqlErrorHelper.toArabicMessage(e);
+                  await showCupertinoDialog(
+                    context: ctx,
+                    builder: (_) => CupertinoAlertDialog(
+                      title: Text(AppLocalizations.of(context).error),
+                      content: Text(friendly),
+                      actions: [
+                        CupertinoDialogAction(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          child: Text(AppLocalizations.of(context).ok),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               },
-              child: Text(AppLocalizations.of(context)!.save),
+              child: Text(AppLocalizations.of(context).save),
             ),
           ],
         ),
@@ -219,7 +281,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
   }
 
   Future<void> _deleteUser(AppUser u) async {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     final ok = await showCupertinoDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
@@ -247,13 +309,13 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     final perms =
         context.watch<AuthCubit>().state.user?.permissions ?? const [];
     final canManage = perms.contains(AppPermissions.manageUsers);
     return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text(l.usersManagementTitle),
+      navigationBar: const CupertinoNavigationBar(
+        middle: Text('إدارة المستخدمين'),
       ),
       child: SafeArea(
         child: !canManage
@@ -271,9 +333,13 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                           child: Text(l.addAction),
                         ),
                         const SizedBox(width: 8),
-                        CupertinoButton(
+                        ActionButton(
                           onPressed: _load,
-                          child: Text(l.update),
+                          label: 'تحديث',
+                          leading: const Icon(
+                            CupertinoIcons.refresh,
+                            color: CupertinoColors.white,
+                          ),
                         ),
                       ],
                     ),
@@ -290,7 +356,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                 ? '${u.fullName} (${u.username})'
                                 : u.username,
                           ),
-                          subtitle: Text(u.isActive ? l.active : l.inactive),
+                          subtitle: Text(u.isActive ? 'نشط' : 'غير نشط'),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
@@ -299,7 +365,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                                   horizontal: 8,
                                 ),
                                 onPressed: () => _editRoles(u.id),
-                                child: Text(l.rolesLabel),
+                                child: const Text('الأدوار'),
                               ),
                               CupertinoButton(
                                 padding: const EdgeInsets.symmetric(

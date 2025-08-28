@@ -2,6 +2,7 @@ import 'package:clothes_pos/core/di/locator.dart';
 import 'dart:io' show Platform, File;
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader_bridge.dart';
+import 'package:clothes_pos/core/hardware/uhf/noop_uhf_reader.dart';
 import 'package:clothes_pos/data/datasources/product_dao.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
 import 'package:clothes_pos/data/datasources/purchase_dao.dart';
@@ -30,6 +31,8 @@ import 'package:clothes_pos/data/datasources/expense_dao.dart';
 import 'package:clothes_pos/data/repositories/expense_repository.dart';
 import 'package:clothes_pos/data/datasources/audit_dao.dart';
 import 'package:clothes_pos/data/repositories/audit_repository.dart';
+import 'package:clothes_pos/data/repositories/aggregated_reports_repository.dart';
+import 'package:clothes_pos/core/db/database_helper.dart';
 
 void registerDataModules() {
   // Product DAO & Repository
@@ -88,6 +91,12 @@ void registerDataModules() {
   sl.registerLazySingleton<AuditDao>(() => AuditDao(sl()));
   sl.registerLazySingleton<AuditRepository>(() => AuditRepository(sl()));
 
+  // Aggregated analytical reports (uses raw Database)
+  sl.registerLazySingletonAsync<AggregatedReportsRepository>(() async {
+    final db = await sl<DatabaseHelper>().database;
+    return AggregatedReportsRepository(db);
+  });
+
   // UHF Reader (Windows)
   if (Platform.isWindows) {
     // محاولة اكتشاف مسار bridge32_helper.exe تلقائياً.
@@ -118,16 +127,21 @@ void registerDataModules() {
         // ignore
       }
     }
-    if (resolved == null) {
-      // سجّل تحذيراً: سيؤدي استخدام المسار النسبي الغير موجود إلى خطأ عند التشغيل.
+    final disableEnv = Platform.environment['UHF_DISABLE'] ?? '';
+    final disabledFlag =
+        disableEnv == '1' || disableEnv.toLowerCase() == 'true';
+    if (disabledFlag) {
+      sl.registerLazySingleton<UHFReader>(() => NoopUHFReader());
+    } else if (resolved == null) {
       // ignore: avoid_print
       print(
-        '[UHF] لم يتم العثور على bridge32_helper.exe — حدد المسار عبر متغير البيئة UHF_BRIDGE_EXE',
+        '[UHF] لم يتم العثور على bridge32_helper.exe سيتم استخدام قارئ وهمي (Noop)',
       );
-      resolved = 'bridge32_helper.exe';
+      sl.registerLazySingleton<UHFReader>(() => NoopUHFReader());
+    } else {
+      sl.registerLazySingleton<UHFReader>(
+        () => UHFReaderBridgeProcess(executablePath: resolved!),
+      );
     }
-    sl.registerLazySingleton<UHFReader>(
-      () => UHFReaderBridgeProcess(executablePath: resolved!),
-    );
   }
 }

@@ -24,12 +24,22 @@ class AppLabeledField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Text(label, textDirection: TextDirection.rtl),
-          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              label,
+              textDirection: TextDirection.rtl,
+              style: const TextStyle(
+                color: Color(0xFF000000),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
           GestureDetector(
             onTap: onTap,
             behavior: HitTestBehavior.translucent,
@@ -41,6 +51,11 @@ class AppLabeledField extends StatelessWidget {
                 keyboardType: keyboardType,
                 textDirection: TextDirection.rtl,
                 readOnly: readOnly,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: Color(0xFF000000),
+                  fontWeight: FontWeight.w500,
+                ),
                 decoration: BoxDecoration(
                   color: CupertinoColors.white,
                   border: Border.all(

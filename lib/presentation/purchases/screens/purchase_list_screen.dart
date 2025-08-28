@@ -48,8 +48,8 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
         middle: const Text('فواتير المشتريات'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.refresh),
           onPressed: (_loading || !canPurchase) ? null : _load,
+          child: const Icon(CupertinoIcons.refresh),
         ),
       ),
       child: _loading
@@ -127,8 +127,8 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
         middle: Text('فاتورة #${inv.id ?? ''}'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          child: const Icon(CupertinoIcons.refresh),
           onPressed: _loading ? null : _load,
+          child: const Icon(CupertinoIcons.refresh),
         ),
       ),
       child: _loading

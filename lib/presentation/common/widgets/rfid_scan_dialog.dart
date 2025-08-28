@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/core/di/locator.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader_bridge.dart';
 
 /// Presents a live scanning dialog and returns the distinct EPC list when closed.
@@ -66,7 +66,9 @@ class _RfidScanDialogState extends State<_RfidScanDialog> {
       await _errSub?.cancel();
       await _reader?.close();
     } finally {
-      if (mounted) Navigator.of(widget.dialogCtx).pop(_seen);
+      if (mounted && widget.dialogCtx.mounted) {
+        Navigator.of(widget.dialogCtx).pop(_seen);
+      }
     }
   }
 
@@ -81,7 +83,7 @@ class _RfidScanDialogState extends State<_RfidScanDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return CupertinoAlertDialog(
       title: Text(l.scanning),
       content: SizedBox(

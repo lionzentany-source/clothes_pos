@@ -2,7 +2,8 @@ import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/datasources/returns_dao.dart';
 import 'package:clothes_pos/data/repositories/returns_repository.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 
 import 'package:flutter/cupertino.dart';
 
@@ -75,30 +76,29 @@ class _ReturnScreenState extends State<ReturnScreen> {
       showCupertinoDialog(
         context: ctx,
         builder: (_) => CupertinoAlertDialog(
-          title: Text(AppLocalizations.of(ctx)?.returnDoneTitle ?? 'Done'),
-          content: Text(
-            AppLocalizations.of(ctx)?.returnRecordedMessage ??
-                'Return recorded',
-          ),
+          title: const Text('تم'),
+          content: const Text('تم تسجيل المرتجع'),
           actions: [
             CupertinoDialogAction(
               isDefaultAction: true,
               onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(AppLocalizations.of(ctx)?.ok ?? 'OK'),
+              child: const Text('حسنًا'),
             ),
           ],
         ),
       );
     } catch (e) {
-      showCupertinoDialog(
+      if (!mounted || !context.mounted) return;
+      final friendly = SqlErrorHelper.toArabicMessage(e);
+      await showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
-          title: Text(AppLocalizations.of(context)?.error ?? 'Error'),
-          content: Text(e.toString()),
+          title: const Text('خطأ'),
+          content: Text(friendly),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text(AppLocalizations.of(context)?.closeAction ?? 'Close'),
+              child: const Text('إغلاق'),
             ),
           ],
         ),
@@ -110,22 +110,15 @@ class _ReturnScreenState extends State<ReturnScreen> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(
-          AppLocalizations.of(context)?.returnSaleTitle ?? 'Sale Return',
-        ),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: _save,
-          child: Text(AppLocalizations.of(context)?.save ?? 'Save'),
-        ),
+        middle: const Text('مرتجع بيع'),
+        trailing: ActionButton(onPressed: _save, label: 'حفظ'),
       ),
       child: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(12),
           children: [
-            Text(
-              AppLocalizations.of(context)?.invoiceNumberHint ??
-                  'Enter invoice then load items',
+            const Text(
+              'أدخل رقم الفاتورة ثم حمّل العناصر',
               textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 8),
@@ -141,16 +134,12 @@ class _ReturnScreenState extends State<ReturnScreen> {
               onPressed: _loading ? null : _load,
               child: _loading
                   ? const CupertinoActivityIndicator()
-                  : Text(
-                      AppLocalizations.of(context)?.loadItems ?? 'Load Items',
-                    ),
+                  : const Text('تحميل العناصر'),
             ),
             const SizedBox(height: 8),
             CupertinoTextField(
               controller: _reasonCtrl,
-              placeholder:
-                  AppLocalizations.of(context)?.returnReasonPlaceholder ??
-                  'Return reason (optional)',
+              placeholder: 'سبب المرتجع (اختياري)',
               textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 12),
@@ -198,18 +187,9 @@ class _ReturnLineEditorState extends State<_ReturnLineEditor> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Builder(
-            builder: (ctx) {
-              final l10n = AppLocalizations.of(ctx);
-              final template =
-                  l10n?.saleItemRemainingTemplate ??
-                  'SaleItem {id} — Remaining: {remaining} — Price: {price}';
-              final text = template
-                  .replaceAll('{id}', m.saleItemId.toString())
-                  .replaceAll('{remaining}', m.remaining.toString())
-                  .replaceAll('{price}', money(context, m.unitPrice));
-              return Text(text, textDirection: TextDirection.rtl);
-            },
+          Text(
+            'SaleItem ${m.saleItemId} — المتبقي: ${m.remaining} — السعر: ${money(context, m.unitPrice)}',
+            textDirection: TextDirection.rtl,
           ),
           const SizedBox(height: 6),
           Row(

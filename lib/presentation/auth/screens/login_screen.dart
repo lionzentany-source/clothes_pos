@@ -4,7 +4,7 @@ import 'package:clothes_pos/data/repositories/auth_repository.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,86 +53,57 @@ class _LoginScreenState extends State<LoginScreen> {
     // Verify credentials without changing the route yet
     final verified = await _authRepo.login(user.username, password);
     if (verified == null) {
-      if (!mounted) return;
-      _showErrorDialog(
-        ctx,
-        'خطأ',
-        l?.loginInvalid ?? 'بيانات الدخول غير صحيحة',
-      );
+      if (!mounted || !ctx.mounted) return;
+      _showErrorDialog(ctx, 'خطأ', l.loginInvalid);
       return;
     }
 
-    if (!mounted) return;
+    if (!mounted || !ctx.mounted) return;
     ctx.read<AuthCubit>().setUser(verified);
   }
 
   Future<String?> _promptForPassword(AppUser user) async {
     final ctrl = TextEditingController();
-    return showCupertinoModalPopup<String>(
+    return showCupertinoDialog<String>(
       context: context,
-      builder: (ctx) {
-        return CupertinoPopupSurface(
-          isSurfacePainted: true,
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AppLocalizations.of(context)?.loginEnterPassword ??
-                        'أدخل كلمة المرور',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    user.fullName?.isNotEmpty == true
-                        ? user.fullName!
-                        : user.username,
-                  ),
-                  const SizedBox(height: 12),
-                  CupertinoTextField(
-                    controller: ctrl,
-                    placeholder:
-                        AppLocalizations.of(context)?.loginEnterPassword ??
-                        'كلمة المرور',
-                    obscureText: true,
-                    autofocus: true,
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CupertinoButton(
-                          onPressed: () => Navigator.of(ctx).pop(),
-                          child: Text(
-                            AppLocalizations.of(context)?.loginCancel ??
-                                'إلغاء',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: CupertinoButton.filled(
-                          onPressed: () =>
-                              Navigator.of(ctx).pop(ctrl.text.trim()),
-                          child: Text(
-                            AppLocalizations.of(context)?.loginContinue ??
-                                'متابعة',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(AppLocalizations.of(context).loginEnterPassword),
+        content: Column(
+          children: [
+            const SizedBox(height: 4),
+            Text(
+              user.fullName?.isNotEmpty == true
+                  ? user.fullName!
+                  : user.username,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: CupertinoColors.activeBlue,
               ),
             ),
+            const SizedBox(height: 8),
+            CupertinoTextField(
+              controller: ctrl,
+              placeholder: AppLocalizations.of(context).loginEnterPassword,
+              obscureText: true,
+              autofocus: true,
+              obscuringCharacter: '•',
+              style: const TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(AppLocalizations.of(context).loginCancel),
           ),
-        );
-      },
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
+            child: Text(AppLocalizations.of(context).loginContinue),
+          ),
+        ],
+      ),
     );
   }
 
@@ -159,9 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
       builder: (context, state) {
         return CupertinoPageScaffold(
           navigationBar: CupertinoNavigationBar(
-            middle: Text(
-              AppLocalizations.of(context)?.loginTitle ?? 'تسجيل الدخول',
-            ),
+            middle: Text(AppLocalizations.of(context).loginTitle),
           ),
           child: SafeArea(
             child: _loading
@@ -185,27 +154,27 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: _users.isEmpty
                               ? Center(
                                   child: Text(
-                                    AppLocalizations.of(
-                                          context,
-                                        )?.loginNoUsers ??
-                                        'لا يوجد مستخدمون نشطون',
+                                    AppLocalizations.of(context).loginNoUsers,
                                   ),
                                 )
                               : LayoutBuilder(
                                   builder: (context, constraints) {
                                     final maxWidth = constraints.maxWidth;
-                                    final cardWidth = 160.0;
+                                    const targetSize =
+                                        150.0; // unified square size
+                                    const spacing = 12.0;
                                     final crossAxisCount =
-                                        (maxWidth / (cardWidth + 16))
+                                        (maxWidth / (targetSize + spacing))
                                             .floor()
-                                            .clamp(1, 6);
+                                            .clamp(1, 8);
                                     return GridView.builder(
                                       gridDelegate:
                                           SliverGridDelegateWithFixedCrossAxisCount(
                                             crossAxisCount: crossAxisCount,
-                                            mainAxisSpacing: 12,
-                                            crossAxisSpacing: 12,
-                                            childAspectRatio: 1.2,
+                                            mainAxisSpacing: spacing,
+                                            crossAxisSpacing: spacing,
+                                            childAspectRatio:
+                                                1.0, // square cells
                                           ),
                                       itemCount: _users.length,
                                       itemBuilder: (context, index) {
@@ -214,66 +183,69 @@ class _LoginScreenState extends State<LoginScreen> {
                                             u.fullName?.isNotEmpty == true
                                             ? u.fullName!
                                             : u.username;
-                                        return CupertinoButton(
-                                          padding: EdgeInsets.zero,
-                                          onPressed: state.loading
-                                              ? null
-                                              : () => _onUserTapped(u),
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: CupertinoColors.activeBlue
-                                                  .withOpacity(0.08),
-                                              borderRadius:
-                                                  BorderRadius.circular(14),
-                                              border: Border.all(
+                                        return AspectRatio(
+                                          aspectRatio: 1,
+                                          child: CupertinoButton(
+                                            padding: EdgeInsets.zero,
+                                            onPressed: state.loading
+                                                ? null
+                                                : () => _onUserTapped(u),
+                                            child: Container(
+                                              decoration: BoxDecoration(
                                                 color: CupertinoColors
                                                     .activeBlue
-                                                    .withOpacity(0.25),
-                                              ),
-                                              boxShadow: [
-                                                BoxShadow(
+                                                    .withOpacity(0.08),
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                border: Border.all(
                                                   color: CupertinoColors
                                                       .activeBlue
-                                                      .withOpacity(0.08),
-                                                  blurRadius: 6,
-                                                  offset: const Offset(0, 2),
+                                                      .withOpacity(0.25),
                                                 ),
-                                              ],
-                                            ),
-                                            padding: const EdgeInsets.all(12),
-                                            child: Column(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.center,
-                                              children: [
-                                                Container(
-                                                  width: 64,
-                                                  height: 64,
-                                                  decoration: BoxDecoration(
-                                                    color: CupertinoColors
-                                                        .activeBlue
-                                                        .withOpacity(0.15),
-                                                    shape: BoxShape.circle,
+                                              ),
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Container(
+                                                    width: 60,
+                                                    height: 60,
+                                                    decoration: BoxDecoration(
+                                                      color: CupertinoColors
+                                                          .activeBlue
+                                                          .withOpacity(0.18),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(
+                                                      CupertinoIcons
+                                                          .person_crop_circle,
+                                                      size: 34,
+                                                      color: CupertinoColors
+                                                          .activeBlue,
+                                                    ),
                                                   ),
-                                                  child: const Icon(
-                                                    CupertinoIcons
-                                                        .person_crop_circle,
-                                                    size: 36,
-                                                    color: CupertinoColors
-                                                        .activeBlue,
+                                                  const SizedBox(height: 8),
+                                                  Padding(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                        ),
+                                                    child: Text(
+                                                      display,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 13,
+                                                      ),
+                                                      maxLines: 2,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
                                                   ),
-                                                ),
-                                                const SizedBox(height: 10),
-                                                Text(
-                                                  display,
-                                                  textAlign: TextAlign.center,
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ],
+                                                ],
+                                              ),
                                             ),
                                           ),
                                         );

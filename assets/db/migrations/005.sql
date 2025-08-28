@@ -1,3 +1,5 @@
+PRAGMA foreign_keys=OFF;
+
 -- Migration 005: add brands table and brand_id to parent_products
 BEGIN TRANSACTION;
 
@@ -33,4 +35,6 @@ ALTER TABLE parent_products_new RENAME TO parent_products;
 CREATE INDEX IF NOT EXISTS idx_parent_products_brand_id ON parent_products(brand_id);
 
 COMMIT;
+
+PRAGMA foreign_keys=ON;
 

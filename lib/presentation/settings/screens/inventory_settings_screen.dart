@@ -1,7 +1,7 @@
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/settings_repository.dart';
 import 'package:flutter/cupertino.dart';
-import '../../../l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class InventorySettingsScreen extends StatefulWidget {
   const InventorySettingsScreen({super.key});
@@ -39,7 +39,7 @@ class _InventorySettingsScreenState extends State<InventorySettingsScreen> {
       await showCupertinoDialog(
         context: context,
         builder: (_) {
-          final l = AppLocalizations.of(context)!;
+          final l = AppLocalizations.of(context);
           return CupertinoAlertDialog(
             title: Text(l.done),
             content: Text(l.settingsSaved),
@@ -60,7 +60,7 @@ class _InventorySettingsScreenState extends State<InventorySettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(middle: Text(l.inventorySettings)),
       child: SafeArea(

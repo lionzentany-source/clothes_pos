@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/presentation/pos/bloc/pos_cubit.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
 import 'package:clothes_pos/data/repositories/settings_repository.dart';
 
 class RfidToggle extends StatefulWidget {
@@ -37,22 +37,15 @@ class _RfidToggleState extends State<RfidToggle> {
   }
 
   Future<void> _toggle() async {
-    final l10n = AppLocalizations.of(context); // May be null early in lifecycle
     if (_reader == null) {
-      _show(
-        l10n?.rfidNotAvailableTitle ?? 'N/A',
-        l10n?.rfidNotAvailableMessage ?? 'RFID not available',
-      );
+      _show('غير متاح', 'قارئ RFID غير متوفر على هذه المنصة');
       return;
     }
     try {
       final settings = sl<SettingsRepository>();
       final enabled = await settings.get('rfid_enabled');
       if (enabled != '1' && enabled?.toLowerCase() != 'true') {
-        _show(
-          l10n?.rfidDisabledTitle ?? 'Disabled',
-          l10n?.rfidEnableInSettings ?? 'Enable RFID first',
-        );
+        _show('غير مفعّل', 'يرجى تفعيل RFID من الإعدادات أولاً');
         return;
       }
       final debounceMs =
@@ -64,10 +57,7 @@ class _RfidToggleState extends State<RfidToggle> {
         // If it's a mock reader, اخبر المستخدم أنه مجرد وضع تجريبي
         final readerType = _reader.runtimeType.toString();
         if (readerType.contains('Mock')) {
-          _show(
-            l10n?.rfidMockModeTitle ?? 'Mock Mode',
-            l10n?.rfidMockModeMessage ?? 'Running in mock mode',
-          );
+          _show('وضع تجريبي', 'يتم تشغيل RFID بوضع محاكي بدون جهاز فعلي');
         }
         await _reader!.initialize();
         await _reader!.open();
@@ -99,7 +89,7 @@ class _RfidToggleState extends State<RfidToggle> {
         if (mounted) setState(() => _scanning = false);
       }
     } catch (e) {
-      _show(l10n?.error ?? 'Error', e.toString());
+      _show('خطأ', e.toString());
     }
   }
 
@@ -114,7 +104,7 @@ class _RfidToggleState extends State<RfidToggle> {
           CupertinoDialogAction(
             isDefaultAction: true,
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)?.ok ?? 'OK'),
+            child: const Text('حسنًا'),
           ),
         ],
       ),
@@ -123,10 +113,9 @@ class _RfidToggleState extends State<RfidToggle> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final available = _reader != null;
     return CupertinoButton(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
       onPressed: available ? _toggle : null,
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -136,12 +125,8 @@ class _RfidToggleState extends State<RfidToggle> {
                 ? CupertinoIcons.radiowaves_left
                 : CupertinoIcons.dot_radiowaves_left_right,
           ),
-          const SizedBox(width: 6),
-          Text(
-            _scanning
-                ? (l10n?.rfidStop ?? 'Stop RFID')
-                : (l10n?.rfidStart ?? 'Start RFID'),
-          ),
+          const SizedBox(width: AppSpacing.xxs + 2),
+          Text(_scanning ? 'إيقاف RFID' : 'تشغيل RFID'),
         ],
       ),
     );

@@ -2,6 +2,9 @@ import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/supplier_repository.dart';
 import 'package:clothes_pos/data/models/supplier.dart';
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
 
 class SupplierSearchPage extends StatefulWidget {
   const SupplierSearchPage({super.key});
@@ -19,7 +22,9 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
     setState(() => _loading = true);
     try {
       final q = _q.text.trim();
-      _results = q.isEmpty ? await _repo.listAll(limit: 50) : await _repo.search(q, limit: 50);
+      _results = q.isEmpty
+          ? await _repo.listAll(limit: 50)
+          : await _repo.search(q, limit: 50);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -34,7 +39,86 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(middle: Text('اختيار المورد')),
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('اختيار المورد'),
+        trailing: ActionButton(
+          label: 'إضافة',
+          leading: const Icon(CupertinoIcons.add, color: CupertinoColors.white),
+          onPressed: () async {
+            final nameCtrl = TextEditingController();
+            final contactCtrl = TextEditingController();
+            await showCupertinoDialog(
+              context: context,
+              builder: (ctx) => CupertinoAlertDialog(
+                title: const Text('إضافة مورد'),
+                content: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      controller: nameCtrl,
+                      placeholder: 'اسم المورد',
+                      textDirection: TextDirection.rtl,
+                    ),
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      controller: contactCtrl,
+                      placeholder: 'بيانات التواصل (اختياري)',
+                      textDirection: TextDirection.rtl,
+                    ),
+                  ],
+                ),
+                actions: [
+                  CupertinoDialogAction(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('إلغاء'),
+                  ),
+                  CupertinoDialogAction(
+                    isDefaultAction: true,
+                    onPressed: () async {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) return;
+                      try {
+                        final id = await _repo.create(
+                          name,
+                          contactInfo: contactCtrl.text.trim(),
+                        );
+                        if (!mounted || !ctx.mounted) return;
+                        Navigator.of(ctx).pop();
+                        final created = Supplier(
+                          id: id,
+                          name: name,
+                          contactInfo: contactCtrl.text.trim().isEmpty
+                              ? null
+                              : contactCtrl.text.trim(),
+                        );
+                        if (!context.mounted) return;
+                        Navigator.of(context).pop<Supplier>(created);
+                      } catch (e) {
+                        if (!mounted || !ctx.mounted) return;
+                        final friendly = SqlErrorHelper.toArabicMessage(e);
+                        await showCupertinoDialog(
+                          context: ctx,
+                          builder: (_) => CupertinoAlertDialog(
+                            title: const Text('خطأ'),
+                            content: Text(friendly),
+                            actions: [
+                              CupertinoDialogAction(
+                                onPressed: () => Navigator.of(ctx).pop(),
+                                child: const Text('إغلاق'),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text('حفظ'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
       child: SafeArea(
         child: Column(
           children: [
@@ -61,11 +145,10 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
                         );
                       },
                     ),
-            )
+            ),
           ],
         ),
       ),
     );
   }
 }
-

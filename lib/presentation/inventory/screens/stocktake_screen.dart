@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/presentation/inventory/bloc/stocktake_rfid_cubit.dart';
@@ -8,6 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/inventory/bloc/stocktake_cubit.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
 import 'package:clothes_pos/data/models/inventory_item_row.dart';
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
@@ -48,7 +50,7 @@ class _StocktakeScreenState extends State<StocktakeScreen> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(AppLocalizations.of(context)!.stocktakeTitle),
+        middle: Text(AppLocalizations.of(context).stocktakeTitle),
       ),
       child: SafeArea(
         child: Column(
@@ -60,39 +62,78 @@ class _StocktakeScreenState extends State<StocktakeScreen> {
                 onChanged: (v) => context.read<StocktakeCubit>().load(query: v),
                 placeholder: AppLocalizations.of(
                   context,
-                )!.searchProductPlaceholder,
+                ).searchProductPlaceholder,
               ),
             ),
             BlocBuilder<StocktakeCubit, StocktakeState>(
               builder: (context, state) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _Chip(
-                        label: AppLocalizations.of(context)!.countedUnitsLabel,
-                        value: state.countedUnits.toString(),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
                       ),
-                      _Chip(
-                        label: AppLocalizations.of(
-                          context,
-                        )!.uncountedUnitsLabel,
-                        value: state.uncountedUnits.toString(),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _Chip(
+                            label: AppLocalizations.of(
+                              context,
+                            ).countedUnitsLabel,
+                            value: state.countedUnits.toString(),
+                          ),
+                          _Chip(
+                            label: AppLocalizations.of(
+                              context,
+                            ).uncountedUnitsLabel,
+                            value: state.uncountedUnits.toString(),
+                          ),
+                          _Chip(
+                            label: AppLocalizations.of(
+                              context,
+                            ).countedCostLabel,
+                            value: money(context, state.totalCostCounted),
+                          ),
+                          _Chip(
+                            label: AppLocalizations.of(
+                              context,
+                            ).countedProfitLabel,
+                            value: money(context, state.totalProfitCounted),
+                          ),
+                        ],
                       ),
-                      _Chip(
-                        label: AppLocalizations.of(context)!.countedCostLabel,
-                        value: money(context, state.totalCostCounted),
-                      ),
-                      _Chip(
-                        label: AppLocalizations.of(context)!.countedProfitLabel,
-                        value: money(context, state.totalProfitCounted),
-                      ),
-                    ],
-                  ),
+                    ),
+                    BlocListener<StocktakeRfidCubit, StocktakeRfidState>(
+                      listenWhen: (prev, curr) =>
+                          prev.error != curr.error && curr.error != null,
+                      listener: (context, state) {
+                        final e = state.error;
+                        if (e == null || !mounted) return;
+                        final l = AppLocalizations.of(context);
+                        showCupertinoDialog(
+                          context: context,
+                          builder: (_) => CupertinoAlertDialog(
+                            title: Text(l.notEnabled),
+                            content: Text(
+                              e.toString().contains('Bridge ready timeout')
+                                  ? 'تعذر تشغيل جسر قارئ RFID خلال المهلة. تأكد من:\n- وجود bridge32_helper.exe وتحديد مساره (UHF_BRIDGE_EXE)\n- تثبيت .NET 6 Desktop Runtime (x86)\n- توصيل القارئ وعدم وجود برنامج آخر يستخدمه'
+                                  : e.toString(),
+                            ),
+                            actions: [
+                              CupertinoDialogAction(
+                                isDefaultAction: true,
+                                child: Text(l.ok),
+                                onPressed: () => Navigator.of(context).pop(),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      child: const SizedBox.shrink(),
+                    ),
+                  ],
                 );
               },
             ),
@@ -100,20 +141,18 @@ class _StocktakeScreenState extends State<StocktakeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: [
-                  CupertinoButton.filled(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ActionButton(
                     onPressed: () {
                       context.read<StocktakeRfidCubit>().start();
                     },
-                    child: Text(AppLocalizations.of(context)!.startRfid),
+                    label: AppLocalizations.of(context).startRfid,
                   ),
                   const SizedBox(width: 8),
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ActionButton(
                     onPressed: () {
                       context.read<StocktakeRfidCubit>().stop();
                     },
-                    child: Text(AppLocalizations.of(context)!.stopReading),
+                    label: AppLocalizations.of(context).stopReading,
                   ),
                   const SizedBox(width: 8),
                   CupertinoSegmentedControl<int>(
@@ -140,66 +179,58 @@ class _StocktakeScreenState extends State<StocktakeScreen> {
                         .setBarcodeUnitsPerScan(v),
                   ),
                   const SizedBox(width: 8),
-                  CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ActionButton(
+                    label: AppLocalizations.of(context).addByBarcode,
                     onPressed: () async {
                       try {
                         final code = await FlutterBarcodeScanner.scanBarcode(
                           '#ff6666',
-                          AppLocalizations.of(context)?.cancel ?? 'إلغاء',
+                          'إلغاء',
                           true,
                           ScanMode.BARCODE,
                         );
-                        if (!mounted) return;
+                        if (!mounted || !context.mounted) return;
                         if (code == '-1') return;
-                        // search variant by barcode and add units per user selection
+                        // ابحث عن المتغير بالباركود وأضف وحدات حسب خيار المستخدم
                         final repo = sl<ProductRepository>();
                         final vs = await repo.searchVariants(
                           barcode: code,
                           limit: 1,
                         );
-                        if (!mounted) return;
+                        if (!mounted || !context.mounted) return;
                         if (vs.isEmpty) {
-                          // ignore: use_build_context_synchronously
-                          showCupertinoDialog(
+                          await showCupertinoDialog(
                             context: context,
                             builder: (dctx) => CupertinoAlertDialog(
-                              title: Text(AppLocalizations.of(dctx)!.notFound),
+                              title: Text(AppLocalizations.of(dctx).notFound),
                               content: Text(
-                                AppLocalizations.of(dctx)!.noProductForBarcode,
+                                AppLocalizations.of(dctx).noProductForBarcode,
                               ),
                             ),
                           );
                           return;
                         }
                         final v = vs.first;
-                        if (!mounted) return;
-                        // ignore: use_build_context_synchronously
+                        if (!mounted || !context.mounted) return;
                         final units = context
                             .read<StocktakeCubit>()
                             .state
                             .barcodeUnitsPerScan;
-                        // ignore: use_build_context_synchronously
                         context.read<StocktakeCubit>().markCountedByVariant(
                           v.id!,
                           units: units,
                         );
                       } catch (e) {
-                        if (!mounted) return;
-                        // ignore: use_build_context_synchronously
-                        showCupertinoDialog(
+                        if (!mounted || !context.mounted) return;
+                        await showCupertinoDialog(
                           context: context,
                           builder: (_) => CupertinoAlertDialog(
-                            title: Text(
-                              AppLocalizations.of(context)?.scanErrorTitle ??
-                                  'خطأ المسح',
-                            ),
+                            title: const Text('خطأ المسح'),
                             content: Text(e.toString()),
                           ),
                         );
                       }
                     },
-                    child: Text(AppLocalizations.of(context)!.addByBarcode),
                   ),
                 ],
               ),
@@ -247,12 +278,12 @@ class _RowItem extends StatelessWidget {
     final v = row.variant;
     final subtitle = [
       if ((v.size ?? '').isNotEmpty)
-        '${AppLocalizations.of(context)!.sizeLabel} ${v.size}',
+        '${AppLocalizations.of(context).sizeLabel} ${v.size}',
       if ((v.color ?? '').isNotEmpty)
-        '${AppLocalizations.of(context)!.colorLabel} ${v.color}',
-      '${AppLocalizations.of(context)!.skuLabel} ${v.sku}',
+        '${AppLocalizations.of(context).colorLabel} ${v.color}',
+      '${AppLocalizations.of(context).skuLabel} ${v.sku}',
       if ((v.barcode ?? '').isNotEmpty)
-        '${AppLocalizations.of(context)!.barcodeLabel} ${v.barcode}',
+        '${AppLocalizations.of(context).barcodeLabel} ${v.barcode}',
     ].join('  •  ');
 
     return CupertinoListTile(
@@ -272,13 +303,13 @@ class _RowItem extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            '${AppLocalizations.of(context)!.countedUnitsLabel}: '
+            '${AppLocalizations.of(context).countedUnitsLabel}: '
             '${context.select<StocktakeCubit, int>((c) => c.state.countedUnitsByVariant[v.id] ?? 0)}  •  '
-            '${AppLocalizations.of(context)!.quantityLabel} ${v.quantity}',
+            '${AppLocalizations.of(context).quantityLabel} ${v.quantity}',
           ),
           const SizedBox(height: 4),
           Text(
-            '${AppLocalizations.of(context)!.priceLabel} ${money(context, v.salePrice)}',
+            '${AppLocalizations.of(context).priceLabel} ${money(context, v.salePrice)}',
           ),
         ],
       ),

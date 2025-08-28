@@ -6,12 +6,16 @@ import 'package:clothes_pos/data/repositories/purchase_repository.dart';
 import 'package:clothes_pos/data/models/product_variant.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/presentation/common/widgets/app_labeled_field.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:clothes_pos/presentation/common/widgets/rfid_scan_dialog.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
 import 'package:clothes_pos/presentation/common/view_only_banner.dart';
+
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
+
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 
 import 'variant_search_page.dart';
 import 'supplier_search_page.dart';
@@ -29,6 +33,7 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
   final _items = <_ItemEditModel>[_ItemEditModel.empty()];
   bool _saving = false;
   DateTime _receivedDate = DateTime.now();
+  String? _supplierName;
 
   Future<void> _pickVariant(int index) async {
     final selected = await Navigator.of(context).push<ProductVariant>(
@@ -36,11 +41,14 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
     );
     if (selected != null && mounted) {
       setState(() {
-        _items[index].selectedVariant = selected;
-        _items[index].variantId.text = selected.id?.toString() ?? '';
-        if (_items[index].cost.text.trim() == '0') {
-          _items[index].cost.text = (selected.costPrice).toString();
+        final model = _items[index];
+        model.selectedVariant = selected;
+        model.variantId.text = selected.id?.toString() ?? '';
+        if (model.cost.text.trim() == '0') {
+          model.cost.text = (selected.costPrice).toString();
+          model.baseCost = selected.costPrice;
         }
+        model.baseCost ??= double.tryParse(model.cost.text.trim());
       });
     }
   }
@@ -63,12 +71,12 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
   Future<void> _save() async {
     final supplierId = int.tryParse(_supplierIdCtrl.text.trim());
     if (supplierId == null) {
-      _showError(AppLocalizations.of(context)!.supplierIdRequired);
+      _showError(AppLocalizations.of(context).supplierIdRequired);
       return;
     }
     final items = <PurchaseInvoiceItem>[];
     if (_items.isEmpty) {
-      _showError(AppLocalizations.of(context)!.addAtLeastOne);
+      _showError(AppLocalizations.of(context).addAtLeastOne);
       return;
     }
     for (final m in _items) {
@@ -76,15 +84,15 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
       final qty = int.tryParse(m.quantity.text.trim());
       final cost = double.tryParse(m.cost.text.trim());
       if (variantId == null) {
-        _showError(AppLocalizations.of(context)!.pickVariant);
+        _showError(AppLocalizations.of(context).pickVariant);
         return;
       }
       if (qty == null || qty <= 0) {
-        _showError(AppLocalizations.of(context)!.qtyMustBePositive);
+        _showError(AppLocalizations.of(context).qtyMustBePositive);
         return;
       }
       if (cost == null || cost < 0) {
-        _showError(AppLocalizations.of(context)!.costMustBePositive);
+        _showError(AppLocalizations.of(context).costMustBePositive);
         return;
       }
       // Validate RFID count not exceeding quantity (optional warning)
@@ -92,7 +100,7 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
         _showError(
           AppLocalizations.of(
             context,
-          )!.rfidExceedsQty(m.rfids.length.toString(), qty.toString()),
+          ).rfidExceedsQty(m.rfids.length.toString(), qty.toString()),
         );
         return;
       }
@@ -122,7 +130,8 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
-      _showError(AppLocalizations.of(context)!.invoiceSaveFailed(e.toString()));
+      final friendly = SqlErrorHelper.toArabicMessage(e);
+      _showError(friendly);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -132,12 +141,12 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
     showCupertinoDialog(
       context: context,
       builder: (dialogCtx) => CupertinoAlertDialog(
-        title: Text(AppLocalizations.of(context)!.error),
+        title: Text(AppLocalizations.of(context).error),
         content: Text(msg),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: Text(AppLocalizations.of(context)!.ok),
+            child: Text(AppLocalizations.of(context).ok),
             onPressed: () => Navigator.of(dialogCtx).pop(),
           ),
         ],
@@ -154,52 +163,84 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
         false;
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(AppLocalizations.of(context)!.purchaseInvoiceTitle),
+        middle: Text(AppLocalizations.of(context).purchaseInvoiceTitle),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           onPressed: (_saving || !canPurchase) ? null : _save,
           child: _saving
               ? const CupertinoActivityIndicator()
-              : Text(AppLocalizations.of(context)!.save),
+              : Text(AppLocalizations.of(context).save),
         ),
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
           children: [
             if (!canPurchase)
-              ViewOnlyBanner(
-                message: AppLocalizations.of(
-                  context,
-                )!.purchaseEditorViewOnlyWarning,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              const ViewOnlyBanner(
+                message: 'عرض فقط: لا تملك صلاحية إنشاء/تعديل فواتير المشتريات',
+                margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               ),
+            // Supplier field (RTL aligned)
             AppLabeledField(
-              label: AppLocalizations.of(context)!.supplier,
+              label: AppLocalizations.of(context).supplier,
               controller: _supplierIdCtrl,
               readOnly: true,
-              placeholder: AppLocalizations.of(context)!.supplier,
-              trailing: AppInlineIconButton(
-                icon: CupertinoIcons.search,
-                onTap: !canPurchase
-                    ? () {}
-                    : () async {
-                        final selected = await Navigator.of(context).push(
-                          CupertinoPageRoute(
-                            builder: (_) => const SupplierSearchPage(),
-                          ),
-                        );
-                        if (selected != null) {
-                          setState(() {
-                            _supplierIdCtrl.text =
-                                selected.id?.toString() ?? '';
-                          });
-                        }
-                      },
+              placeholder: AppLocalizations.of(context).supplier,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppInlineIconButton(
+                    icon: CupertinoIcons.search,
+                    onTap: !canPurchase
+                        ? () {}
+                        : () async {
+                            final selected = await Navigator.of(context).push(
+                              CupertinoPageRoute(
+                                builder: (_) => const SupplierSearchPage(),
+                              ),
+                            );
+                            if (selected != null) {
+                              setState(() {
+                                _supplierIdCtrl.text =
+                                    (selected.id?.toString() ?? '');
+                                _supplierName = selected.name;
+                              });
+                            }
+                          },
+                  ),
+                  if (_supplierName != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text(
+                        'المورد: $_supplierName',
+                        textDirection: TextDirection.rtl,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: CupertinoColors.secondaryLabel,
+                        ),
+                      ),
+                    ),
+                  if (_supplierIdCtrl.text.trim().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 6),
+                      child: AppInlineIconButton(
+                        icon: CupertinoIcons.xmark_circle_fill,
+                        color: CupertinoColors.systemRed,
+                        onTap: !canPurchase
+                            ? () {}
+                            : () => setState(() {
+                                _supplierIdCtrl.text = '';
+                                _supplierName = null;
+                              }),
+                      ),
+                    ),
+                ],
               ),
             ),
+            // Reference field
             AppLabeledField(
-              label: AppLocalizations.of(context)!.referenceOptional,
+              label: AppLocalizations.of(context).referenceOptional,
               controller: _referenceCtrl,
               trailing: const Icon(
                 CupertinoIcons.tag,
@@ -207,25 +248,13 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
                 color: CupertinoColors.inactiveGray,
               ),
             ),
+            // Received date row
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                AppLocalizations.of(context)!.receivedDate,
-                textDirection: TextDirection.rtl,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '${_receivedDate.year}-${_receivedDate.month.toString().padLeft(2, '0')}-${_receivedDate.day.toString().padLeft(2, '0')}',
-                  ),
                   CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    child: Text(AppLocalizations.of(context)!.change),
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
                     onPressed: !canPurchase
                         ? null
                         : () async {
@@ -253,22 +282,22 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
                                                 MainAxisAlignment.spaceEvenly,
                                             children: [
                                               CupertinoButton(
-                                                child: Text(
-                                                  AppLocalizations.of(
-                                                    context,
-                                                  )!.cancel,
-                                                ),
                                                 onPressed: () =>
                                                     Navigator.of(ctx).pop(),
-                                              ),
-                                              CupertinoButton(
                                                 child: Text(
                                                   AppLocalizations.of(
                                                     context,
-                                                  )!.done,
+                                                  ).cancel,
                                                 ),
+                                              ),
+                                              CupertinoButton(
                                                 onPressed: () =>
                                                     Navigator.of(ctx).pop(tmp),
+                                                child: Text(
+                                                  AppLocalizations.of(
+                                                    context,
+                                                  ).done,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -281,16 +310,36 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
                               setState(() => _receivedDate = picked);
                             }
                           },
+                    child: Text(AppLocalizations.of(context).change),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        '${_receivedDate.year}-${_receivedDate.month.toString().padLeft(2, '0')}-${_receivedDate.day.toString().padLeft(2, '0')}',
+                        textDirection: TextDirection.rtl,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    AppLocalizations.of(context).receivedDate,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    textDirection: TextDirection.rtl,
                   ),
                 ],
               ),
             ),
-
+            // Items section title
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text(
-                AppLocalizations.of(context)!.items,
-                textDirection: TextDirection.rtl,
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 4),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Text(
+                  AppLocalizations.of(context).items,
+                  textDirection: TextDirection.rtl,
+                ),
               ),
             ),
             for (int i = 0; i < _items.length; i++)
@@ -302,10 +351,9 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
               ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: CupertinoButton(
+              child: ActionButton(
+                label: AppLocalizations.of(context).addItem,
                 onPressed: canPurchase ? _addItem : null,
-                color: CupertinoColors.activeBlue,
-                child: Text(AppLocalizations.of(context)!.addItem),
               ),
             ),
             const SizedBox(height: 40),
@@ -322,6 +370,7 @@ class _ItemEditModel {
   final TextEditingController cost;
   final List<String> rfids;
   ProductVariant? selectedVariant;
+  double? baseCost; // original cost snapshot for quick reset
   _ItemEditModel({
     required this.variantId,
     required this.quantity,
@@ -359,18 +408,21 @@ class _ItemEditor extends StatefulWidget {
 
 class _ItemEditorState extends State<_ItemEditor> {
   Widget _scanRfidButton(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return CupertinoButton(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Text(AppLocalizations.of(context)!.scanRfid),
+      child: Text(l.scanRfid),
       onPressed: () async {
         try {
+          // Capture localization early to avoid context after awaits
           final settings = sl<SettingsRepository>();
           final enabled = await settings.get('rfid_enabled');
           if (!mounted) return; // ensure widget still in tree
           final enabledBool =
               enabled == '1' || (enabled?.toLowerCase() == 'true');
           if (!enabledBool) {
-            final l = AppLocalizations.of(context)!;
+            if (!mounted) return;
+            if (!context.mounted) return;
             await showCupertinoDialog(
               context: context,
               builder: (dialogCtx) => CupertinoAlertDialog(
@@ -388,9 +440,10 @@ class _ItemEditorState extends State<_ItemEditor> {
             if (!mounted) return;
             return;
           }
-          final loc = AppLocalizations.of(context)!;
+          // Use already captured localization
+          if (!context.mounted) return;
           final seen = await showRfidScanDialog(context) ?? <String>[];
-          if (!mounted) return;
+          if (!mounted || !context.mounted) return;
           final qty = int.tryParse(widget.model.quantity.text.trim()) ?? 0;
           int added = 0;
           int ignored = 0;
@@ -406,18 +459,19 @@ class _ItemEditorState extends State<_ItemEditor> {
           }
           if (added > 0) setState(() {});
           if (ignored > 0 && mounted) {
+            if (!context.mounted) return;
             await showCupertinoDialog(
               context: context,
-              builder: (_) => CupertinoAlertDialog(
-                title: Text(loc.warning),
+              builder: (dialogCtx) => CupertinoAlertDialog(
+                title: Text(l.warning),
                 content: Text(
-                  loc.addedIgnored(added.toString(), ignored.toString()),
+                  l.addedIgnored(added.toString(), ignored.toString()),
                 ),
                 actions: [
                   CupertinoDialogAction(
                     isDefaultAction: true,
-                    child: Text(loc.ok),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.of(dialogCtx).pop(),
+                    child: Text(l.ok),
                   ),
                 ],
               ),
@@ -425,17 +479,17 @@ class _ItemEditorState extends State<_ItemEditor> {
           }
         } catch (e) {
           if (!mounted) return;
-          final l = AppLocalizations.of(context)!;
+          if (!context.mounted) return;
           await showCupertinoDialog(
             context: context,
-            builder: (_) => CupertinoAlertDialog(
+            builder: (dialogCtx) => CupertinoAlertDialog(
               title: Text(l.scanError),
               content: Text(e.toString()),
               actions: [
                 CupertinoDialogAction(
                   isDefaultAction: true,
+                  onPressed: () => Navigator.of(dialogCtx).pop(),
                   child: Text(l.ok),
-                  onPressed: () => Navigator.of(context).pop(),
                 ),
               ],
             ),
@@ -447,11 +501,11 @@ class _ItemEditorState extends State<_ItemEditor> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context)!;
+    final loc = AppLocalizations.of(context);
     final selected = widget.model.selectedVariant;
     final variantLabel = selected == null
         ? loc.selectVariant
-        : '${selected.sku} — ${selected.size ?? ''} ${selected.color ?? ''}'
+        : '${selected.sku ?? ''} — ${selected.size ?? ''} ${selected.color ?? ''}'
               .trim();
 
     return Container(
@@ -508,6 +562,49 @@ class _ItemEditorState extends State<_ItemEditor> {
               const Spacer(),
             ],
           ),
+          const SizedBox(height: 6),
+          // Quick actions: -10%, -5%, Reset, +5%, +10%, VAT 15%
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final entry in [
+                {'label': '-10%', 'factor': 0.90},
+                {'label': '-5%', 'factor': 0.95},
+                {'label': 'إعادة', 'factor': null},
+                {'label': '+5%', 'factor': 1.05},
+                {'label': '+10%', 'factor': 1.10},
+                {'label': 'VAT 15%', 'factor': 1.15},
+              ])
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  onPressed: widget.canEdit
+                      ? () {
+                          final base =
+                              widget.model.baseCost ??
+                              double.tryParse(widget.model.cost.text.trim()) ??
+                              0;
+                          if (entry['factor'] == null) {
+                            // Reset
+                            widget.model.cost.text = base.toStringAsFixed(2);
+                          } else {
+                            final f = entry['factor'] as double;
+                            final v = (base * f);
+                            widget.model.cost.text = v.toStringAsFixed(2);
+                          }
+                          setState(() {
+                            widget.model.baseCost =
+                                base; // ensure baseline saved
+                          });
+                        }
+                      : null,
+                  child: Text(entry['label'] as String),
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           // RFID tags list and adder
           Align(
@@ -555,7 +652,6 @@ class _ItemEditorState extends State<_ItemEditor> {
                   horizontal: 10,
                   vertical: 6,
                 ),
-                child: Text(AppLocalizations.of(context)!.addRfidCard),
                 onPressed: !widget.canEdit
                     ? null
                     : () async {
@@ -565,7 +661,7 @@ class _ItemEditorState extends State<_ItemEditor> {
                             final ctrl = TextEditingController();
                             return CupertinoAlertDialog(
                               title: Text(
-                                AppLocalizations.of(context)!.addRfidTitle,
+                                AppLocalizations.of(ctx).addRfidTitle,
                               ),
                               content: Column(
                                 children: [
@@ -573,26 +669,24 @@ class _ItemEditorState extends State<_ItemEditor> {
                                   CupertinoTextField(
                                     controller: ctrl,
                                     placeholder: AppLocalizations.of(
-                                      context,
-                                    )!.epcPlaceholder,
+                                      ctx,
+                                    ).epcPlaceholder,
                                     textDirection: TextDirection.ltr,
                                   ),
                                 ],
                               ),
                               actions: [
                                 CupertinoDialogAction(
-                                  child: Text(
-                                    AppLocalizations.of(context)!.cancel,
-                                  ),
                                   onPressed: () => Navigator.of(ctx).pop(),
+                                  child: Text(AppLocalizations.of(ctx).cancel),
                                 ),
                                 CupertinoDialogAction(
                                   isDefaultAction: true,
-                                  child: Text(
-                                    AppLocalizations.of(context)!.addAction,
-                                  ),
                                   onPressed: () =>
                                       Navigator.of(ctx).pop(ctrl.text.trim()),
+                                  child: Text(
+                                    AppLocalizations.of(ctx).addAction,
+                                  ),
                                 ),
                               ],
                             );
@@ -603,17 +697,28 @@ class _ItemEditorState extends State<_ItemEditor> {
                               int.tryParse(widget.model.quantity.text.trim()) ??
                               0;
                           if (qty > 0 && widget.model.rfids.length >= qty) {
-                            showCupertinoDialog(
+                            if (!context.mounted) return;
+                            await showCupertinoDialog(
                               context: context,
-                              builder: (_) => CupertinoAlertDialog(
+                              builder: (dialogCtx) => CupertinoAlertDialog(
                                 title: Text(
-                                  AppLocalizations.of(context)!.warning,
+                                  AppLocalizations.of(dialogCtx).warning,
                                 ),
                                 content: Text(
                                   AppLocalizations.of(
-                                    context,
-                                  )!.rfiCardsLimitReached,
+                                    dialogCtx,
+                                  ).rfiCardsLimitReached,
                                 ),
+                                actions: [
+                                  CupertinoDialogAction(
+                                    isDefaultAction: true,
+                                    onPressed: () =>
+                                        Navigator.of(dialogCtx).pop(),
+                                    child: Text(
+                                      AppLocalizations.of(dialogCtx).ok,
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                             return;
@@ -623,6 +728,7 @@ class _ItemEditorState extends State<_ItemEditor> {
                           }
                         }
                       },
+                child: Text(AppLocalizations.of(context).addRfidCard),
               ),
             ],
           ),
@@ -648,7 +754,7 @@ class _RfidScanDialog extends StatefulWidget {
 class _RfidScanDialogState extends State<_RfidScanDialog> {
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     return CupertinoAlertDialog(
       title: Text(l.scanning),
       content: SizedBox(
@@ -695,8 +801,8 @@ class _RfidScanDialogState extends State<_RfidScanDialog> {
       actions: [
         CupertinoDialogAction(
           isDefaultAction: true,
-          child: Text(l.stop),
           onPressed: widget.onStop,
+          child: Text(l.stop),
         ),
       ],
     );

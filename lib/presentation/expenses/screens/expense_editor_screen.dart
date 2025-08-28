@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
 import 'package:clothes_pos/data/repositories/expense_repository.dart';
 import 'package:clothes_pos/data/models/expense.dart';
 import 'package:clothes_pos/data/models/expense_category.dart';
@@ -9,6 +8,7 @@ import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/presentation/common/view_only_banner.dart';
 import 'package:clothes_pos/data/repositories/cash_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
 
 class ExpenseEditorScreen extends StatefulWidget {
   final Expense? existing;
@@ -58,9 +58,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
     await showCupertinoModalPopup(
       context: context,
       builder: (_) => CupertinoActionSheet(
-        title: Text(
-          AppLocalizations.of(context)?.chooseCategory ?? 'اختر الفئة',
-        ),
+        title: const Text('اختر الفئة'),
         actions: [
           for (final c in _cats)
             CupertinoActionSheetAction(
@@ -74,7 +72,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
         cancelButton: CupertinoActionSheetAction(
           onPressed: () => Navigator.of(context).pop(),
           isDefaultAction: true,
-          child: Text(AppLocalizations.of(context)?.cancel ?? 'إلغاء'),
+          child: const Text('إلغاء'),
         ),
       ),
     );
@@ -102,16 +100,14 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
               children: [
                 CupertinoButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: Text(AppLocalizations.of(context)?.cancel ?? 'إلغاء'),
+                  child: const Text('إلغاء'),
                 ),
                 CupertinoButton(
                   onPressed: () {
                     setState(() => _date = temp);
                     Navigator.of(context).pop();
                   },
-                  child: Text(
-                    AppLocalizations.of(context)?.pickAction ?? 'اختر',
-                  ),
+                  child: const Text('اختر'),
                 ),
               ],
             ),
@@ -130,13 +126,11 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
     if (!canEdit) return;
     final amt = double.tryParse(_amountCtrl.text.trim());
     if (amt == null || amt <= 0) {
-      _showErr(
-        AppLocalizations.of(context)?.enterValidNumber ?? 'أدخل مبلغ صالح',
-      );
+      _showErr('أدخل مبلغ صالح');
       return;
     }
     if (_category == null && widget.existing == null) {
-      _showErr(AppLocalizations.of(context)?.chooseCategory ?? 'اختر فئة');
+      _showErr('اختر فئة');
       return;
     }
     setState(() => _saving = true);
@@ -157,14 +151,16 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
             ? null
             : _descCtrl.text.trim(),
       );
+      final userId = context.read<AuthCubit>().state.user?.id;
       if (exp.id == null) {
-        await _repo.createExpense(exp);
+        await _repo.createExpense(exp, userId: userId);
       } else {
-        await _repo.updateExpense(exp);
+        await _repo.updateExpense(exp, userId: userId);
       }
-      if (mounted) Navigator.of(context).pop(true);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
     } catch (e) {
-      _showErr(e.toString());
+      _showErr(SqlErrorHelper.toArabicMessage(e));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -174,12 +170,12 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: Text(AppLocalizations.of(context)?.error ?? 'خطأ'),
+        title: const Text('خطأ'),
         content: Text(msg),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)?.ok ?? 'حسناً'),
+            child: const Text('حسناً'),
           ),
         ],
       ),
@@ -196,12 +192,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
     final existing = widget.existing;
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(
-          existing == null
-              ? (AppLocalizations.of(context)?.newExpenseTitle ?? 'مصروف جديد')
-              : (AppLocalizations.of(context)?.editExpenseTitle ??
-                    'تعديل مصروف'),
-        ),
+        middle: Text(existing == null ? 'مصروف جديد' : 'تعديل مصروف'),
         trailing: canEdit
             ? CupertinoButton(
                 padding: EdgeInsets.zero,
@@ -217,11 +208,9 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             if (!canEdit)
-              ViewOnlyBanner(
-                message:
-                    (AppLocalizations.of(context)?.viewOnlyRecordExpenses ??
-                    'عرض فقط: لا تملك صلاحية تسجيل المصروفات'),
-                margin: const EdgeInsets.only(bottom: 12),
+              const ViewOnlyBanner(
+                message: 'عرض فقط: لا تملك صلاحية تسجيل المصروفات',
+                margin: EdgeInsets.only(bottom: 12),
               ),
             CupertinoButton(
               onPressed: canEdit ? _pickCategory : null,
@@ -229,10 +218,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  _category?.name ??
-                      existing?.categoryName ??
-                      (AppLocalizations.of(context)?.chooseCategory ??
-                          'اختر الفئة'),
+                  _category?.name ?? existing?.categoryName ?? 'اختر الفئة',
                   textDirection: TextDirection.rtl,
                 ),
               ),
@@ -240,8 +226,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
             const SizedBox(height: 8),
             CupertinoTextField(
               controller: _amountCtrl,
-              placeholder:
-                  AppLocalizations.of(context)?.amountPlaceholder ?? 'المبلغ',
+              placeholder: 'المبلغ',
               enabled: canEdit,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -255,7 +240,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  '${AppLocalizations.of(context)?.dateLabel ?? 'التاريخ:'} ${_date.toIso8601String().substring(0, 10)}',
+                  'التاريخ: ${_date.toIso8601String().substring(0, 10)}',
                   textDirection: TextDirection.rtl,
                 ),
               ),
@@ -268,24 +253,18 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
                   absorbing: !canEdit,
                   child: CupertinoSegmentedControl<String>(
                     groupValue: _paidVia,
-                    children: {
+                    children: const {
                       'cash': Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          AppLocalizations.of(context)?.cashShort ?? 'نقد',
-                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('نقد'),
                       ),
                       'bank': Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          AppLocalizations.of(context)?.bankShort ?? 'بنكي',
-                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('بنكي'),
                       ),
                       'other': Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        child: Text(
-                          AppLocalizations.of(context)?.otherShort ?? 'أخرى',
-                        ),
+                        padding: EdgeInsets.symmetric(horizontal: 8),
+                        child: Text('أخرى'),
                       ),
                     },
                     onValueChanged: (v) => setState(() => _paidVia = v),
@@ -296,9 +275,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
             const SizedBox(height: 12),
             CupertinoTextField(
               controller: _descCtrl,
-              placeholder:
-                  AppLocalizations.of(context)?.descriptionOptional ??
-                  'وصف (اختياري)',
+              placeholder: 'وصف (اختياري)',
               enabled: canEdit,
               maxLines: 3,
               textDirection: TextDirection.rtl,
@@ -307,11 +284,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
             if (canEdit)
               CupertinoButton.filled(
                 onPressed: _saving ? null : _save,
-                child: Text(
-                  existing == null
-                      ? (AppLocalizations.of(context)?.save ?? 'حفظ')
-                      : (AppLocalizations.of(context)?.updateAction ?? 'تحديث'),
-                ),
+                child: Text(existing == null ? 'حفظ' : 'تحديث'),
               ),
           ],
         ),

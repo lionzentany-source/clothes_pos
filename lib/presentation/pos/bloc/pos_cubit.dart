@@ -7,12 +7,15 @@ import 'package:clothes_pos/data/repositories/category_repository.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:async';
 
 part 'pos_state.dart';
 
 class PosCubit extends Cubit<PosState> {
   final ProductRepository _products = sl<ProductRepository>();
   final SalesRepository _sales = sl<SalesRepository>();
+  final Map<int, String> _variantNameCache = {};
+  Timer? _debounce;
 
   PosCubit() : super(const PosState());
 
@@ -50,6 +53,7 @@ class PosCubit extends Cubit<PosState> {
   }
 
   Future<void> search(String q, {int? brandId, int? categoryId}) async {
+    // immediate search (externally can be debounced wrapper)
     emit(state.copyWith(searching: true, query: q));
     final filters = _parseGrammar(q);
     final name = q
@@ -86,6 +90,13 @@ class PosCubit extends Cubit<PosState> {
     emit(state.copyWith(searching: false, searchResults: refined));
   }
 
+  void debouncedSearch(String q, {int? categoryId}) {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 300), () {
+      search(q, categoryId: categoryId);
+    });
+  }
+
   void updateLineDetails(
     int variantId, {
     double? discountAmount,
@@ -118,8 +129,18 @@ class PosCubit extends Cubit<PosState> {
       updated[idx] = updated[idx].copyWith(quantity: updated[idx].quantity + 1);
     } else {
       updated.add(CartLine(variantId: variantId, quantity: 1, price: price));
+      // Prefetch variant name asynchronously (non-blocking)
+      resolveVariantName(variantId);
     }
     emit(state.copyWith(cart: updated));
+  }
+
+  Future<String?> resolveVariantName(int variantId) async {
+    if (_variantNameCache.containsKey(variantId))
+      return _variantNameCache[variantId];
+    final name = await _products.getVariantDisplayName(variantId);
+    if (name != null) _variantNameCache[variantId] = name;
+    return name;
   }
 
   void changeQty(int variantId, int qty) {

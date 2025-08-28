@@ -6,6 +6,8 @@ import 'package:path/path.dart' as p;
 
 import 'package:ffi/ffi.dart';
 
+import 'package:clothes_pos/core/logging/app_logger.dart';
+
 import 'models.dart';
 import 'uhf_reader.dart';
 
@@ -299,12 +301,12 @@ class UHFReaderWindows implements UHFReader {
           archLabel = null;
         }
         // Debug print: attempting to load this path with detected architecture
-        // ignore: avoid_print
-        print('[UHF] Trying DLL: $path  (arch: ${archLabel ?? 'unknown'})');
+        AppLogger.i(
+          '[UHF] Trying DLL: $path  (arch: ${archLabel ?? 'unknown'})',
+        );
         // Skip obvious mismatch (Flutter desktop = x64)
         if (archLabel == 'x86') {
-          // ignore: avoid_print
-          print(
+          AppLogger.w(
             '[UHF] Skipping $path because it is 32-bit (x86) and app is x64',
           );
           continue;
@@ -338,8 +340,7 @@ class UHFReaderWindows implements UHFReader {
         _status = UHFStatus.idle;
         return;
       } catch (e) {
-        // ignore: avoid_print
-        print('[UHF] Failed to load: ' + path + ' -> ' + e.toString());
+        AppLogger.e('[UHF] Failed to load: $path', error: e);
         lastError = e;
         // continue trying next path
       }
@@ -377,8 +378,7 @@ class UHFReaderWindows implements UHFReader {
       }
       if (deepFound != null) {
         try {
-          // ignore: avoid_print
-          print('[UHF] Deep found DLL: ' + deepFound);
+          AppLogger.i('[UHF] Deep found DLL: $deepFound');
           _lib = ffi.DynamicLibrary.open(deepFound);
           _getUsbCount = _lib
               .lookupFunction<CFHidGetUsbCountNative, CFHidGetUsbCountDart>(
@@ -405,8 +405,7 @@ class UHFReaderWindows implements UHFReader {
           _status = UHFStatus.idle;
           return;
         } catch (e) {
-          // ignore: avoid_print
-          print('[UHF] Deep load failed: ' + deepFound + ' -> ' + e.toString());
+          AppLogger.e('[UHF] Deep load failed: $deepFound', error: e);
           lastError = e;
         }
       }
@@ -472,7 +471,9 @@ class UHFReaderWindows implements UHFReader {
   Future<void> open() async {
     final count = _getUsbCount();
     if (count <= 0) {
-      throw Exception('لم يتم العثور على قارئ UHF عبر USB/HID');
+      // Gracefully mark unavailable instead of throwing
+      _status = UHFStatus.unavailable;
+      return;
     }
     final ph = calloc<ffi.Pointer<ffi.Void>>();
     try {

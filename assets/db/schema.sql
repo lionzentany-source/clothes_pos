@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   parent_product_id INTEGER NOT NULL,
   size TEXT,
   color TEXT,
-  sku TEXT NOT NULL,
+  sku TEXT,
   barcode TEXT,
   rfid_tag TEXT,
   cost_price REAL NOT NULL DEFAULT 0,
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS product_variants (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   FOREIGN KEY (parent_product_id) REFERENCES parent_products(id) ON DELETE CASCADE,
-  UNIQUE(sku),
+  -- UNIQUE(sku) -- removed to allow nullable/duplicate SKUs
   UNIQUE(barcode)
 );
 
@@ -238,14 +238,20 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_variants_parent ON product_variants(parent_product_id);
 CREATE INDEX IF NOT EXISTS idx_variants_sku ON product_variants(sku);
 CREATE INDEX IF NOT EXISTS idx_variants_barcode ON product_variants(barcode);
+CREATE INDEX IF NOT EXISTS idx_variants_rfid ON product_variants(rfid_tag);
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sale_date);
 CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
+CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
+CREATE INDEX IF NOT EXISTS idx_sale_items_variant ON sale_items(variant_id);
 CREATE INDEX IF NOT EXISTS idx_movements_variant ON inventory_movements(variant_id);
 CREATE INDEX IF NOT EXISTS idx_movements_created ON inventory_movements(created_at);
 CREATE INDEX IF NOT EXISTS idx_purchases_supplier ON purchase_invoices(supplier_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_received ON purchase_invoices(received_date);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_invoice ON purchase_invoice_items(purchase_invoice_id);
+CREATE INDEX IF NOT EXISTS idx_purchase_items_variant ON purchase_invoice_items(variant_id);
 CREATE INDEX IF NOT EXISTS idx_payments_sale ON payments(sale_id);
+CREATE INDEX IF NOT EXISTS idx_payments_session ON payments(cash_session_id);
 CREATE INDEX IF NOT EXISTS idx_cash_session_opened ON cash_sessions(opened_at);
 
 COMMIT;

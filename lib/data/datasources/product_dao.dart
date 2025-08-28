@@ -166,7 +166,7 @@ class ProductDao {
 
     final rows = await db.rawQuery(
       '''
-      SELECT pv.*, pp.name AS parent_name, b.name AS brand_name
+  SELECT pv.*, pp.name AS parent_name, pp.category_id AS category_id, b.name AS brand_name
       FROM product_variants pv
       LEFT JOIN parent_products pp ON pv.parent_product_id = pp.id
       LEFT JOIN brands b ON pp.brand_id = b.id
@@ -177,6 +177,23 @@ class ProductDao {
       [...args, limit, offset],
     );
     return rows;
+  }
+
+  Future<Map<String, Object?>?> getVariantRowById(int id) async {
+    final db = await _dbHelper.database;
+    final rows = await db.rawQuery(
+      '''
+  SELECT pv.*, pp.name AS parent_name, pp.category_id AS category_id, b.name AS brand_name
+      FROM product_variants pv
+      LEFT JOIN parent_products pp ON pv.parent_product_id = pp.id
+      LEFT JOIN brands b ON pp.brand_id = b.id
+      WHERE pv.id = ?
+      LIMIT 1
+      ''',
+      [id],
+    );
+    if (rows.isEmpty) return null;
+    return rows.first;
   }
 
   Future<List<ProductVariant>> getLowStockVariants({
@@ -207,7 +224,9 @@ class ProductDao {
 
   Future<void> removeRfidTag({required String epc}) async {
     final db = await _dbHelper.database;
-    await db.rawDelete('DELETE FROM product_variant_rfids WHERE epc = ?', [epc]);
+    await db.rawDelete('DELETE FROM product_variant_rfids WHERE epc = ?', [
+      epc,
+    ]);
   }
 
   Future<List<String>> listRfidTags(int variantId) async {
@@ -278,5 +297,13 @@ class ProductDao {
     );
     return rows.map((e) => (e['color'] as String).trim()).toList();
   }
-}
 
+  Future<List<String>> distinctBrands({int limit = 100}) async {
+    final db = await _dbHelper.database;
+    final rows = await db.rawQuery(
+      "SELECT DISTINCT b.name AS brand FROM parent_products pp LEFT JOIN brands b ON pp.brand_id = b.id WHERE b.name IS NOT NULL AND TRIM(b.name) <> '' ORDER BY b.name COLLATE NOCASE ASC LIMIT ?",
+      [limit],
+    );
+    return rows.map((e) => (e['brand'] as String).trim()).toList();
+  }
+}

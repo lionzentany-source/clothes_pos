@@ -1,10 +1,14 @@
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/users_repository.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
+
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+
+import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
 
 class RolesPermissionsScreen extends StatefulWidget {
   const RolesPermissionsScreen({super.key});
@@ -42,15 +46,12 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
 
   Future<void> _addRoleDialog() async {
     final ctrl = TextEditingController();
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: Text(l.newRoleTitle),
-        content: CupertinoTextField(
-          controller: ctrl,
-          placeholder: l.roleNamePlaceholder,
-        ),
+        title: const Text('دور جديد'),
+        content: CupertinoTextField(controller: ctrl, placeholder: 'اسم الدور'),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx),
@@ -63,12 +64,26 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
               if (name.isEmpty) return;
               try {
                 await _repo.createRole(name);
-                if (!mounted) return;
+                if (!mounted || !ctx.mounted) return;
                 Navigator.pop(ctx);
                 setState(() => _loading = true);
                 await _load();
               } catch (e) {
-                // يمكن إظهار رسالة خطأ لاحقاً
+                if (!mounted || !ctx.mounted) return;
+                final friendly = SqlErrorHelper.toArabicMessage(e);
+                await showCupertinoDialog(
+                  context: ctx,
+                  builder: (_) => CupertinoAlertDialog(
+                    title: Text(AppLocalizations.of(ctx).error),
+                    content: Text(friendly),
+                    actions: [
+                      CupertinoDialogAction(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(AppLocalizations.of(ctx).ok),
+                      ),
+                    ],
+                  ),
+                );
               }
             },
             child: Text(l.save),
@@ -79,15 +94,15 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
   }
 
   Future<void> _editRolePermissions(Map<String, Object?> role) async {
-    final l = AppLocalizations.of(context)!;
     final roleId = role['id'] as int;
     final current = await _repo.getRolePermissionIds(roleId);
     final selected = current.toSet();
+    if (!mounted || !context.mounted) return;
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setInner) => CupertinoAlertDialog(
-          title: Text('${l.permissionsTitle}: ${role['name'] as String? ?? ''}'),
+          title: Text('صلاحيات: ${role['name']}'),
           content: SizedBox(
             height: 260,
             width: 320,
@@ -96,9 +111,11 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                 children: _permissions.map((p) {
                   final pid = p['id'] as int;
                   final code = p['code'] as String;
+                  final desc = (p['description'] as String?)?.trim();
+                  final display = (desc == null || desc.isEmpty) ? code : desc;
                   final on = selected.contains(pid);
                   return CupertinoListTile(
-                    title: Text(code),
+                    title: Text(display, textDirection: TextDirection.rtl),
                     trailing: CupertinoSwitch(
                       value: on,
                       onChanged: (v) => setInner(() {
@@ -117,7 +134,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.pop(ctx),
-              child: Text(AppLocalizations.of(context)!.cancel),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
             CupertinoDialogAction(
               isDefaultAction: true,
@@ -128,10 +145,10 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                       .read<AuthCubit>()
                       .refreshCurrentUserPermissions();
                 }
-                if (!mounted) return;
+                if (!mounted || !ctx.mounted) return;
                 Navigator.pop(ctx);
               },
-              child: Text(AppLocalizations.of(context)!.save),
+              child: Text(AppLocalizations.of(context).save),
             ),
           ],
         ),
@@ -141,11 +158,11 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
 
   Future<void> _renameRole(Map<String, Object?> role) async {
     final ctrl = TextEditingController(text: role['name'] as String? ?? '');
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: Text(l.editNameTitle),
+        title: const Text('تعديل الاسم'),
         content: CupertinoTextField(controller: ctrl),
         actions: [
           CupertinoDialogAction(
@@ -157,11 +174,29 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
             onPressed: () async {
               final name = ctrl.text.trim();
               if (name.isEmpty) return;
-              await _repo.renameRole(role['id'] as int, name);
-              if (!mounted) return;
-              Navigator.pop(ctx);
-              setState(() => _loading = true);
-              await _load();
+              try {
+                await _repo.renameRole(role['id'] as int, name);
+                if (!mounted || !ctx.mounted) return;
+                Navigator.pop(ctx);
+                setState(() => _loading = true);
+                await _load();
+              } catch (e) {
+                if (!mounted || !ctx.mounted) return;
+                final friendly = SqlErrorHelper.toArabicMessage(e);
+                await showCupertinoDialog(
+                  context: ctx,
+                  builder: (_) => CupertinoAlertDialog(
+                    title: Text(AppLocalizations.of(ctx).error),
+                    content: Text(friendly),
+                    actions: [
+                      CupertinoDialogAction(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(AppLocalizations.of(ctx).ok),
+                      ),
+                    ],
+                  ),
+                );
+              }
             },
             child: Text(l.save),
           ),
@@ -171,12 +206,14 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
   }
 
   Future<void> _deleteRole(Map<String, Object?> role) async {
-    final l = AppLocalizations.of(context)!;
+    final l = AppLocalizations.of(context);
+    if (!mounted || !context.mounted) return;
+    if (!mounted || !context.mounted) return;
     final ok = await showCupertinoDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(l.delete),
-        content: Text(l.deleteRoleConfirm(role['name'] as String? ?? '')),
+        content: Text('حذف الدور "${role['name']}"؟'),
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx, false),
@@ -204,7 +241,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
         context: context,
         builder: (ctx) => CupertinoAlertDialog(
           title: Text(l.error),
-          content: Text(l.deleteRoleFailed),
+          content: const Text('تعذر حذف الدور قد يكون مستخدماً'),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.pop(ctx),
@@ -218,7 +255,6 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
     final canManage =
         context.watch<AuthCubit>().state.user?.permissions.contains(
           AppPermissions.manageUsers,
@@ -226,19 +262,22 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
         false;
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(l.rolesPermissionsTitle),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: canManage ? _addRoleDialog : null,
-          child: const Icon(CupertinoIcons.add),
-        ),
+        middle: const Text('الأدوار و الصلاحيات'),
+        trailing: canManage
+            ? ActionButton(
+                onPressed: _addRoleDialog,
+                label: 'إضافة',
+                leading: const Icon(
+                  CupertinoIcons.add,
+                  color: CupertinoColors.white,
+                ),
+              )
+            : null,
       ),
       child: SafeArea(
         child: !canManage
             ? Center(
-                child: Text(
-                  AppLocalizations.of(context)!.permissionDeniedTitle,
-                ),
+                child: Text(AppLocalizations.of(context).permissionDeniedTitle),
               )
             : _loading
             ? const Center(child: CupertinoActivityIndicator())
@@ -256,7 +295,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                           onPressed: canManage
                               ? () => _editRolePermissions(r)
                               : null,
-                          child: Text(l.permissionsLabel),
+                          child: const Text('الصلاحيات'),
                         ),
                         CupertinoButton(
                           padding: const EdgeInsets.symmetric(horizontal: 4),

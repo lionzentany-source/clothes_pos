@@ -5,11 +5,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/core/printing/cash_session_report_service.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
-import 'package:clothes_pos/l10n/app_localizations.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:printing/printing.dart';
+
+import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 
 class CashSessionScreen extends StatefulWidget {
   const CashSessionScreen({super.key});
+
   @override
   State<CashSessionScreen> createState() => _CashSessionScreenState();
 }
@@ -58,12 +61,12 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
     final amount = await showCupertinoDialog<double>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: Text(AppLocalizations.of(context)!.openSessionTitle),
+        title: Text(AppLocalizations.of(context).openSessionTitle),
         content: Column(
           children: [
             const SizedBox(height: 8),
             CupertinoTextField(
-              placeholder: AppLocalizations.of(context)!.openingFloat,
+              placeholder: AppLocalizations.of(context).openingFloat,
               controller: ctrl,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -74,11 +77,11 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(context)!.cancel),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: Text(AppLocalizations.of(context)!.openAction),
+            child: Text(AppLocalizations.of(context).openAction),
             onPressed: () {
               final v = double.tryParse(ctrl.text.trim());
               if (v == null) return;
@@ -89,6 +92,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
       ),
     );
     if (amount == null) return;
+    if (!mounted) return;
     final userId = context.read<AuthCubit>().state.user?.id ?? 1;
     await _repo.openSession(openedBy: userId, openingFloat: amount);
     await _load();
@@ -101,13 +105,13 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(
-          AppLocalizations.of(context)!.logoutConfirmCloseSessionTitle,
+          AppLocalizations.of(context).logoutConfirmCloseSessionTitle,
         ),
         content: Column(
           children: [
             const SizedBox(height: 8),
             CupertinoTextField(
-              placeholder: AppLocalizations.of(context)!.actualDrawerAmount,
+              placeholder: AppLocalizations.of(context).actualDrawerAmount,
               controller: ctrl,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -118,11 +122,11 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(context)!.cancel),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: Text(AppLocalizations.of(context)!.closeAction),
+            child: Text(AppLocalizations.of(context).closeAction),
             onPressed: () {
               final v = double.tryParse(ctrl.text.trim());
               if (v == null) return;
@@ -133,6 +137,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
       ),
     );
     if (amount == null) return;
+    if (!mounted) return;
     final userId = context.read<AuthCubit>().state.user?.id ?? 1;
     final variance = await _repo.closeSession(
       sessionId: _session!['id'] as int,
@@ -143,14 +148,14 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
     await showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
-        title: Text(AppLocalizations.of(context)!.closedTitle),
+        title: Text(AppLocalizations.of(context).closedTitle),
         content: Text(
-          AppLocalizations.of(context)!.variance(variance.toStringAsFixed(2)),
+          AppLocalizations.of(context).variance(variance.toStringAsFixed(2)),
         ),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: Text(AppLocalizations.of(context)!.ok),
+            child: Text(AppLocalizations.of(context).ok),
             onPressed: () => Navigator.pop(context),
           ),
         ],
@@ -168,14 +173,14 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(
           isIn
-              ? AppLocalizations.of(context)!.cashDepositTitle
-              : AppLocalizations.of(context)!.cashWithdrawTitle,
+              ? AppLocalizations.of(context).cashDepositTitle
+              : AppLocalizations.of(context).cashWithdrawTitle,
         ),
         content: Column(
           children: [
             const SizedBox(height: 8),
             CupertinoTextField(
-              placeholder: AppLocalizations.of(context)!.amount,
+              placeholder: AppLocalizations.of(context).amount,
               controller: ctrl,
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
@@ -183,7 +188,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
             ),
             const SizedBox(height: 8),
             CupertinoTextField(
-              placeholder: AppLocalizations.of(context)!.reasonOptional,
+              placeholder: AppLocalizations.of(context).reasonOptional,
               controller: reasonCtrl,
             ),
           ],
@@ -191,11 +196,11 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
         actions: [
           CupertinoDialogAction(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(AppLocalizations.of(context)!.cancel),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           CupertinoDialogAction(
             isDefaultAction: true,
-            child: Text(AppLocalizations.of(context)!.confirm),
+            child: Text(AppLocalizations.of(context).confirm),
             onPressed: () {
               final v = double.tryParse(ctrl.text.trim());
               if (v == null) return;
@@ -226,7 +231,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
-        middle: Text(AppLocalizations.of(context)!.cashSessionTitle),
+        middle: Text(AppLocalizations.of(context).cashSessionTitle),
       ),
       child: SafeArea(
         child: _loading
@@ -248,22 +253,28 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                       children: [
                         Text(
                           _session == null
-                              ? AppLocalizations.of(context)!.noOpenSession
-                              : '${AppLocalizations.of(context)!.sessionOpen}${_session!['id']}',
+                              ? AppLocalizations.of(context).noOpenSession
+                              : '${AppLocalizations.of(context).sessionOpen}${_session!['id']}',
                         ),
                         if (_session == null)
-                          CupertinoButton.filled(
+                          ActionButton(
+                            label: AppLocalizations.of(context).openAction,
                             onPressed: _openSession,
-                            child: Text(
-                              AppLocalizations.of(context)!.openAction,
+                            leading: const Icon(
+                              CupertinoIcons.play_arrow,
+                              size: 18,
+                              color: CupertinoColors.white,
                             ),
                           )
                         else
-                          CupertinoButton(
-                            color: CupertinoColors.destructiveRed,
+                          ActionButton(
+                            label: AppLocalizations.of(context).closeAction,
                             onPressed: _closeSession,
-                            child: Text(
-                              AppLocalizations.of(context)!.closeAction,
+                            color: CupertinoColors.destructiveRed,
+                            leading: Icon(
+                              CupertinoIcons.stop,
+                              size: 18,
+                              color: CupertinoColors.white,
                             ),
                           ),
                       ],
@@ -276,7 +287,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                AppLocalizations.of(context)!.openingFloatLabel(
+                                AppLocalizations.of(context).openingFloatLabel(
                                   money(
                                     context,
                                     (_summary!['opening_float'] as num?)
@@ -286,7 +297,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                                 ),
                               ),
                               Text(
-                                AppLocalizations.of(context)!.cashSales(
+                                AppLocalizations.of(context).cashSales(
                                   money(
                                     context,
                                     (_summary!['sales_cash'] as num?)
@@ -296,7 +307,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                                 ),
                               ),
                               Text(
-                                AppLocalizations.of(context)!.depositsLabel(
+                                AppLocalizations.of(context).depositsLabel(
                                   money(
                                     context,
                                     (_summary!['cash_in'] as num?)
@@ -306,7 +317,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                                 ),
                               ),
                               Text(
-                                AppLocalizations.of(context)!.withdrawalsLabel(
+                                AppLocalizations.of(context).withdrawalsLabel(
                                   money(
                                     context,
                                     (_summary!['cash_out'] as num?)
@@ -316,7 +327,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                                 ),
                               ),
                               Text(
-                                AppLocalizations.of(context)!.expectedCash(
+                                AppLocalizations.of(context).expectedCash(
                                   money(
                                     context,
                                     (_summary!['expected_cash'] as num?)
@@ -339,7 +350,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                             child: CupertinoButton(
                               onPressed: () => _movement(true),
                               child: Text(
-                                AppLocalizations.of(context)!.depositAction,
+                                AppLocalizations.of(context).depositAction,
                               ),
                             ),
                           ),
@@ -348,7 +359,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                             child: CupertinoButton(
                               onPressed: () => _movement(false),
                               child: Text(
-                                AppLocalizations.of(context)!.withdrawAction,
+                                AppLocalizations.of(context).withdrawAction,
                               ),
                             ),
                           ),
@@ -361,7 +372,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                             child: CupertinoButton(
                               color: CupertinoColors.activeBlue,
                               onPressed: () async {
-                                final l = AppLocalizations.of(context)!;
+                                final l = AppLocalizations.of(context);
                                 // New localization getters not yet generated; use existing ones with placeholders.
                                 final file = await CashSessionReportService()
                                     .generateXReport(
@@ -385,9 +396,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                                   onLayout: (_) async => file.readAsBytes(),
                                 );
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.xReport,
-                              ),
+                              child: Text(AppLocalizations.of(context).xReport),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -396,7 +405,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                               color: CupertinoColors.activeBlue,
                               onPressed: () async {
                                 // Z report usually after close; use current expected cash
-                                final l = AppLocalizations.of(context)!;
+                                final l = AppLocalizations.of(context);
                                 final file = await CashSessionReportService()
                                     .generateZReport(
                                       _session!['id'] as int,
@@ -429,9 +438,7 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
                                   onLayout: (_) async => file.readAsBytes(),
                                 );
                               },
-                              child: Text(
-                                AppLocalizations.of(context)!.zReport,
-                              ),
+                              child: Text(AppLocalizations.of(context).zReport),
                             ),
                           ),
                         ],
