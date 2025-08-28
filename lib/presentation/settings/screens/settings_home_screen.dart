@@ -26,6 +26,9 @@ import 'package:clothes_pos/presentation/design/system/app_theme.dart';
 
 import 'package:clothes_pos/assistant/ai/ai_settings_screen.dart';
 import 'package:clothes_pos/assistant/assistant_screen.dart';
+import 'package:clothes_pos/presentation/attributes/screens/manage_attributes_screen.dart';
+import 'package:clothes_pos/presentation/attributes/bloc/attributes_cubit.dart';
+import 'package:clothes_pos/core/config/feature_flags.dart';
 
 class SettingsHomeScreen extends StatefulWidget {
   const SettingsHomeScreen({super.key});
@@ -350,6 +353,18 @@ class _SettingsHomeScreenState extends State<SettingsHomeScreen> {
                     ),
                   ),
                 ),
+                if (FeatureFlags.useDynamicAttributes)
+                  _NavTile(
+                    title: 'Manage Attributes',
+                    onTap: () => Navigator.of(context).push(
+                      CupertinoPageRoute(
+                        builder: (_) => BlocProvider<AttributesCubit>(
+                          create: (_) => sl<AttributesCubit>()..loadAttributes(),
+                          child: const ManageAttributesScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
                 Builder(
                   builder: (ctx) {
                     final settings = ctx.watch<SettingsCubit>().state;
