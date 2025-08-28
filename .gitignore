@@ -1,3 +1,15 @@
+# Ignore local generated sqlite DB backups and tool-created DBs
+backups/*.db
+.dart_tool/sqflite_common_ffi/databases/*.db
+.dart_tool/sqflite_common_ffi/databases/backups/*.db
+
+# Flutter/Dart defaults
+.dart_tool/
+.packages
+build/
+/.idea/
+*.iml
+pubspec.lock
 # Miscellaneous
 *.class
 *.log

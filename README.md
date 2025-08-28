@@ -18,6 +18,21 @@ flutter pub get
 flutter run
 ```
 
+## Developer: clean DB (dynamic attributes)
+
+For working with a fresh, canonical clean database (no legacy size/color columns) the repo uses `backups/clothes_pos_clean.db`.
+
+Quick commands (run from repo root):
+
+```powershell
+dart run tool/create_clean_db.dart    # create backups/clothes_pos_clean.db
+dart run tool/seed_clean_db.dart      # seed sample attributes/variants
+dart run tool/query_variant_attributes.dart 1   # print attributes for variant 1
+```
+
+These tools write/read the canonical `backups/clothes_pos_clean.db` file. Remove other `.db` duplicates under `.dart_tool` if you need to reclaim space; the canonical backups file is the one used by the tooling.
+
+
 ## Project Structure
 - presentation/: Cupertino UI & routing (go_router)
 - domain/: entities & use cases (planned)

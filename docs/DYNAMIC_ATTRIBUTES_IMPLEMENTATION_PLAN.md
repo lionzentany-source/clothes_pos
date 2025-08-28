@@ -59,11 +59,12 @@
 - [ ] **إنشاء وحدات الوصول للبيانات (DAOs & Repositories) الجديدة:**
   - [x] بناء `AttributeDao` و `AttributeRepository` لإدارة الخصائص وقيمها. (implemented)
 - [ ] **تعديل `ProductRepository` و `ProductDao`:**
-  - [ ] استخدام `if (useDynamicAttributes)` للفصل بين المنطق القديم والجديد في الدوال التالية:
-    - `createProductWithVariants`
-    - `updateProductAndVariants`
-    - `searchVariants`
-    - `getVariantsByParent`
+- [x] **تعديل `ProductRepository` و `ProductDao`:**
+  - [x] استخدام `if (useDynamicAttributes)` للفصل بين المنطق القديم والجديد في الدوال التالية:
+    - [x] `createProductWithVariants`
+    - [x] `updateProductAndVariants`
+    - [x] `searchVariants`
+    - [x] `getVariantsByParent`
 - [ ] **كتابة اختبارات الوحدات (Unit Tests):**
   - [ ] كتابة اختبارات جديدة مخصصة للكود الجديد للتأكد من أنه يعمل كما هو متوقع.
   - [x] جزء مبدئي من التحقق: أضفنا أداة اختبار تشغيلية (`tool/test_attribute_repository.dart`) تستخدم `sqflite_common_ffi` للتحقق من وظائف الـDAO/Repository بدون الحاجة لتشغيل Flutter.
@@ -79,6 +80,22 @@
 - Test tooling:
   - `tool/test_attribute_repository.dart` (new) — تشغيل مستقل للتحقق من عمليات الإدخال والربط باستخدام `sqflite_common_ffi`.
 - Migration & tools (unchanged behavior): discovery/extract/commit tools under `tool/` were extended to accept `--db=` and already used to run discovery/extract/commit on dev DB.
+
+**التحديث الحالي (Status update):**
+
+- تم تنفيذ الجزء الأساسي من المرحلة 3 (Backend) مع أدوات مساعدة جاهزة للعمل محليًا. العمل المنجز يشمل إنشاء DAOs/Repositories الخاصة بالخصائص، أدوات تشغيل مستقلة لإنشاء DB نظيف، تهيئته، واستخراج/استعلام الخصائص.
+- تم تعليق/تأجيل ترحيل بيانات legacy لصالح إنشاء قاعدة بيانات نظيفة عند طلب المستخدم؛ لذلك لم نعدل الأعمدة القديمة في قاعدة الإنتاج.
+
+أدوات ومهمات تم تنفيذها وموجودة في المستودع:
+
+- [x] `tool/create_clean_db.dart` — ينشئ `backups/clothes_pos_clean.db` (قاعدة نظيفة بدون أعمدة `size`/`color`).
+- [x] `tool/seed_clean_db.dart` — يملأ `backups/clothes_pos_clean.db` بعينات (attributes/attribute_values/variant_attributes).
+- [x] `tool/query_variant_attributes.dart` — استعلام سريع لعرض الخصائص المرتبطة بمتغير معين (قبلته args: variantId و optional dbPath).
+- [x] `tool/cleanup_db_duplicates.dart` — أداة نظافة لإزالة ملفات .db المكررة داخل `.dart_tool`.
+- [x] تم إضافة `.gitignore` لتجاهل `backups/*.db` وملفات DB التي يولدها `sqflite_common_ffi` داخل `.dart_tool`.
+- [x] تم تحديث `README.md` لإضافة قسم "Developer: clean DB" مع أوامر قصيرة (create/seed/query).
+- [x] تم إزالة نسخ DB المكررة داخل `.dart_tool` وتركنا فقط `backups/clothes_pos_clean.db` كملف Canonical.
+
 
 ### كيف تختبر محليًا (Quick run commands)
 
