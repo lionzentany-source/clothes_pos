@@ -86,6 +86,43 @@
 - تم تنفيذ الجزء الأساسي من المرحلة 3 (Backend) مع أدوات مساعدة جاهزة للعمل محليًا. العمل المنجز يشمل إنشاء DAOs/Repositories الخاصة بالخصائص، أدوات تشغيل مستقلة لإنشاء DB نظيف، تهيئته، واستخراج/استعلام الخصائص.
 - تم تعليق/تأجيل ترحيل بيانات legacy لصالح إنشاء قاعدة بيانات نظيفة عند طلب المستخدم؛ لذلك لم نعدل الأعمدة القديمة في قاعدة الإنتاج.
 
+### تقرير التقدم الآن (آخر تحديث: 2025-08-28)
+
+- ملخص التنفيذ حتى الآن:
+
+  - تم إنشاء DAOs وRepositories للـ Attributes (`AttributeDao`, `AttributeRepository`) وتكاملها الأساسي مع منطق المنتجات.
+  - تم إضافة أداة إنشاء/تعبئة قاعدة بيانات نظيفة: `tool/create_clean_db.dart`, `tool/seed_clean_db.dart`، وتوحيد المسار إلى `backups/clothes_pos_clean.db`.
+  - تمت أدوات تنظيف وإدارة النسخ المكررة من قواعد البيانات داخل `.dart_tool`، وأضيفت قواعد تجاهل `.gitignore` ومنع الالتزام لملفات DB.
+  - الواجهة: تم تنفيذ عنصر واجهة `AttributePicker` ودمجه داخل `ProductEditorScreen` (اختياري عبر `FeatureFlags.useDynamicAttributes` ووجود `skipInit` للاختبارات).
+  - اختبارات واجهة: أضيفت واختبرت `test/widget/attribute_picker_test.dart` و `test/widget/attribute_picker_reorder_test.dart` (تمرير محلي).
+
+- ملفات وتغييرات ملحوظة (نموذجي):
+
+  - `lib/presentation/inventory/widgets/attribute_picker.dart` — واجهة الاختيار (بحث، اقتراحات، إعادة ترتيب سحب/إفلات بنمط Cupertino، سمات الوصول).
+  - `lib/presentation/inventory/screens/product_editor_screen.dart` — ربط واجهة إدارة/اختيار الخصائص للمتغيرات، إضافة `skipInit` للاختبارات.
+  - `lib/data/datasources/attribute_dao.dart`, `lib/data/repositories/attribute_repository.dart` — DAOs وRepositories للخصائص.
+  - أدوات `tool/` المذكورة أعلى (create/seed/query/cleanup).
+
+- حالة الاختبارات والتكامل:
+
+  - اختبارات وحدة/أداة تشغيل: `tool/test_attribute_repository.dart` متاحة لاختبار DAOs عبر `sqflite_common_ffi`.
+  - اختبارات واجهة (Widget): تم تنفيذ اختبارات لعنصر `AttributePicker` محليًا وتمت بنجاح.
+  - اختبارات واجهة إضافية: تمت إضافة وتشغيل اختبارات تحقق لحالة الإدخال ورفض الأسماء المكررة على `ManageAttributesScreen`:
+    - `test/widget/manage_attributes_validation_test.dart` — تغطية: empty input + duplicate-name (case-insensitive). تم التشغيل محليًا ونجاحها.
+  - اختبارات دمج DB-مدعومة (integration tests) لم تُنفذ بعد بصورة شاملة بسبب إدارة دورة حياة DB وDI؛ نوصي بالاعتماد على فحص DI وإعداد DB صريح قبل تشغيلها.
+
+- عناصر مؤقتة/مؤجلة:
+  - التحقق اليدوي الشامل لنتائج سكربت الترحيل على مجموعة بيانات حقيقية ما زال معلقًا حتى يُعطى توقيت مناسب.
+  - تغطية اختبارات `flutter_test` كاملة لمسارات legacy vs dynamic ما زالت مطلوبة.
+
+### أوامر سريعة لتشغيل الاختبارات المحلية (مثال)
+
+```powershell
+flutter test test/widget/attribute_picker_test.dart -r expanded
+flutter test test/widget/attribute_picker_reorder_test.dart -r expanded
+dart run tool/test_attribute_repository.dart
+```
+
 أدوات ومهمات تم تنفيذها وموجودة في المستودع:
 
 - [x] `tool/create_clean_db.dart` — ينشئ `backups/clothes_pos_clean.db` (قاعدة نظيفة بدون أعمدة `size`/`color`).
@@ -95,7 +132,6 @@
 - [x] تم إضافة `.gitignore` لتجاهل `backups/*.db` وملفات DB التي يولدها `sqflite_common_ffi` داخل `.dart_tool`.
 - [x] تم تحديث `README.md` لإضافة قسم "Developer: clean DB" مع أوامر قصيرة (create/seed/query).
 - [x] تم إزالة نسخ DB المكررة داخل `.dart_tool` وتركنا فقط `backups/clothes_pos_clean.db` كملف Canonical.
-
 
 ### كيف تختبر محليًا (Quick run commands)
 
@@ -136,8 +172,9 @@ dart run tool/commit_planned_inserts.dart --apply --backup --db=C:\absolute\path
 
 **الهدف:** تصميم الشاشات الجديدة وتكييف الشاشات الحالية للعمل مع النظام الجديد.
 
-- [ ] **بناء شاشة "إدارة الخصائص":**
-  - [ ] تصميم وتنفيذ شاشة جديدة لإدارة "بنك الخصائص" (إضافة/تعديل/حذف الخصائص وقيمها).
+- [x] **بناء شاشة "إدارة الخصائص":** (partially implemented)
+  - [x] `ManageAttributesScreen` — CRUD + validation + confirmations implemented.
+  - [ ] UX polish, localization, and accessibility review for the screen.
 - [ ] **تعديل "شاشة محرر المنتج":**
   - [ ] استخدام `if (useDynamicAttributes)` لعرض الواجهة المناسبة.
   - [ ] **الواجهة الجديدة:**
