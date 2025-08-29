@@ -1,0 +1,187 @@
+*** Begin Patch
+*** Add File: lib/core/config/feature_flags.dart
++/// A class to hold feature flags for the application.
++///
++/// This implementation prefers a runtime-checkable flag instead of a compile-time
++/// `const` so tests and deployment scripts can toggle behavior without a
++/// full rebuild. The value is resolved in this order:
++///  1. Test/runtime override via `setForTests(bool)`.
++///  2. Environment variable `USE_DYNAMIC_ATTRIBUTES` (true/1/yes -> true).
++///  3. Default `false`.
++import 'dart:io';
++
++class FeatureFlags {
++  static bool? _overrideValue;
++
++  /// Returns whether to use the dynamic attributes system.
++  static bool get useDynamicAttributes {
++    if (_overrideValue != null) return _overrideValue!;
++    final env = Platform.environment['USE_DYNAMIC_ATTRIBUTES'];
++    if (env != null) {
++      final v = env.toLowerCase();
++      if (v == '1' || v == 'true' || v == 'yes') return true;
++      return false;
++    }
++    return false;
++  }
++
++  /// Set the flag for tests or runtime toggles. Call `clearOverride()` to
++  /// revert to environment/default behavior.
++  static void setForTests(bool value) => _overrideValue = value;
++  static void clearOverride() => _overrideValue = null;
++}
++
+*** End Patch
+*** Begin Patch
+*** Add File: lib/data/attributes/attribute_dao.dart
++import 'package:sqflite_common_ffi/sqflite_ffi.dart';
++
++class AttributeDao {
++  /// Ensure attribute exists; return id (existing or newly created).
++  Future<int> ensureAttribute(Database db, String name) async {
++    final rows = await db.query(
++      'attributes',
++      where: 'name = ?',
++      whereArgs: [name],
++    );
++    if (rows.isNotEmpty) return rows.first['id'] as int;
++    return await db.insert('attributes', {'name': name});
++  }
++
++  Future<int?> getAttributeId(Database db, String name) async {
++    final rows = await db.query(
++      'attributes',
++      where: 'name = ?',
++      whereArgs: [name],
++    );
++    if (rows.isEmpty) return null;
++    return rows.first['id'] as int;
++  }
++
++  Future<int> ensureAttributeValue(
++    Database db,
++    int attributeId,
++    String value,
++  ) async {
++    final rows = await db.query(
++      'attribute_values',
++      where: 'attribute_id = ? AND value = ?',
++      whereArgs: [attributeId, value],
++    );
++    if (rows.isNotEmpty) return rows.first['id'] as int;
++    return await db.insert('attribute_values', {
++      'attribute_id': attributeId,
++      'value': value,
++    });
++  }
++
++  Future<void> linkVariantAttribute(
++    Database db,
++    int variantId,
++    int attributeValueId,
++  ) async {
++    final exists = await db.query(
++      'variant_attributes',
++      where: 'variant_id = ? AND attribute_value_id = ?',
++      whereArgs: [variantId, attributeValueId],
++    );
++    if (exists.isNotEmpty) return;
++    await db.insert('variant_attributes', {
++      'variant_id': variantId,
++      'attribute_value_id': attributeValueId,
++    });
++  }
++}
++
+*** End Patch
+*** Begin Patch
+*** Add File: lib/data/attributes/attribute_repository.dart
++import 'package:sqflite_common_ffi/sqflite_ffi.dart';
++import 'attribute_dao.dart';
++
++class AttributeRepository {
++  final AttributeDao dao;
++
++  AttributeRepository(this.dao);
++
++  Future<int> ensureAttributeByName(Database db, String name) async {
++    return dao.ensureAttribute(db, name);
++  }
++
++  Future<int> addValueForAttribute(
++    Database db,
++    String attributeName,
++    String value,
++  ) async {
++    final id = await dao.ensureAttribute(db, attributeName);
++    return dao.ensureAttributeValue(db, id, value);
++  }
++
++  Future<void> link(
++    Database db,
++    int variantId,
++    String attributeName,
++    String value,
++  ) async {
++    final attrId = await dao.ensureAttribute(db, attributeName);
++    final valId = await dao.ensureAttributeValue(db, attrId, value);
++    await dao.linkVariantAttribute(db, variantId, valId);
++  }
++}
++
+*** End Patch
+*** Begin Patch
+*** Add File: tool/test_attribute_repository.dart
++import 'dart:io';
++import 'package:sqflite_common_ffi/sqflite_ffi.dart';
++// path not required here
++import '../lib/data/attributes/attribute_repository.dart';
++import '../lib/data/attributes/attribute_dao.dart';
++
++Future<void> main(List<String> args) async {
++  sqfliteFfiInit();
++  final useReal = args.contains('--db');
++  String dbPath;
++  Database db;
++  if (useReal) {
++    dbPath = args
++        .firstWhere((a) => a.startsWith('--db='), orElse: () => '')
++        .split('=')[1];
++    if (!File(dbPath).existsSync()) {
++      stderr.writeln('DB not found: $dbPath');
++      exit(1);
++    }
++    db = await databaseFactoryFfi.openDatabase(dbPath);
++  } else {
++    db = await databaseFactoryFfi.openDatabase(inMemoryDatabasePath);
++    // create minimal schema
++    await db.execute('''
++      CREATE TABLE attributes (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL);
++    ''');
++    await db.execute('''
++      CREATE TABLE attribute_values (id INTEGER PRIMARY KEY AUTOINCREMENT, attribute_id INTEGER NOT NULL, value TEXT NOT NULL);
++    ''');
++    await db.execute('''
++      CREATE TABLE variant_attributes (variant_id INTEGER NOT NULL, attribute_value_id INTEGER NOT NULL);
++    ''');
++  }
++
++  final repo = AttributeRepository(AttributeDao());
++  print('Ensuring attribute Size...');
++  final attrId = await repo.ensureAttributeByName(db, 'Size');
++  print('Size id = $attrId');
++
++  print('Adding value M for Size...');
++  final valId = await repo.addValueForAttribute(db, 'Size', 'M');
++  print('attribute_value id = $valId');
++
++  print('Linking variant 101 -> value');
++  await repo.link(db, 101, 'Size', 'M');
++  final rows = await db.query('variant_attributes');
++  print('variant_attributes rows: ${rows.length}');
++
++  await db.close();
++  print('Test complete.');
++}
++
+*** End Patch

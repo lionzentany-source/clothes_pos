@@ -3,10 +3,6 @@ import 'package:clothes_pos/data/models/inventory_item_row.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
 import 'package:flutter/cupertino.dart';
 import 'product_editor_screen.dart';
-import 'package:clothes_pos/data/repositories/brand_repository.dart';
-import 'package:clothes_pos/data/models/brand.dart';
-import 'brand_picker_sheet.dart';
-import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 
 import 'package:clothes_pos/presentation/purchases/screens/purchase_editor_screen.dart';
@@ -17,6 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
 import 'package:clothes_pos/presentation/common/view_only_banner.dart';
+import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
 
 class InventoryListScreen extends StatefulWidget {
   const InventoryListScreen({super.key});
@@ -27,13 +24,10 @@ class InventoryListScreen extends StatefulWidget {
 
 class _InventoryListScreenState extends State<InventoryListScreen> {
   final _controller = TextEditingController();
-  Brand? _selectedBrand;
-  List<Brand> _brands = const [];
 
   @override
   void initState() {
     super.initState();
-    _loadBrands();
     context.read<InventoryCubit>().load();
   }
 
@@ -41,13 +35,6 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   void dispose() {
     _controller.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadBrands() async {
-    final repo = sl<BrandRepository>();
-    final list = await repo.listAll(limit: 500);
-    if (!mounted) return;
-    setState(() => _brands = list);
   }
 
   @override
@@ -180,48 +167,10 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                     horizontal: 8,
                     vertical: 4,
                   ),
-                  child: CupertinoButton(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    onPressed: () async {
-                      await showCupertinoModalPopup(
-                        context: context,
-                        builder: (ctx) => BrandPickerSheet(
-                          brands: _brands,
-                          onSelected: (b) {
-                            Navigator.of(ctx).pop();
-                            setState(() => _selectedBrand = b);
-                            context.read<InventoryCubit>().load(
-                              query: _controller.text,
-                              brandId: b.id,
-                            );
-                          },
-                          onAddNew: () async {},
-                          onClear: () {
-                            Navigator.of(ctx).pop();
-                            setState(() => _selectedBrand = null);
-                            context.read<InventoryCubit>().load(
-                              query: _controller.text,
-                              brandId: null,
-                            );
-                          },
-                        ),
-                      );
-                    },
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(CupertinoIcons.tag, size: 18),
-                        const SizedBox(width: 6),
-                        Text(
-                          _selectedBrand?.name ??
-                              (AppLocalizations.of(context).selectAction),
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ],
-                    ),
+                  child: Column(
+                    children: [
+                      // تم حذف زر التصفية والعلامات التجارية
+                    ],
                   ),
                 ),
                 BlocBuilder<InventoryCubit, InventoryState>(
@@ -232,11 +181,18 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                         child: Center(child: CupertinoActivityIndicator()),
                       );
                     }
+                    // Always show a message if no items found after clearing filters
                     if (state.items.isEmpty) {
                       return Padding(
                         padding: const EdgeInsets.all(32),
                         child: Center(
-                          child: Text(AppLocalizations.of(context).notFound),
+                          child: Text(
+                            AppLocalizations.of(context).notFound,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: CupertinoColors.systemGrey,
+                            ),
+                          ),
                         ),
                       );
                     }
@@ -296,15 +252,16 @@ class _InventoryRow extends StatelessWidget {
     final v = row.variant;
     final brand = row.brandName;
     final l = AppLocalizations.of(context);
-    final subtitle = [
-      if (brand != null && brand.trim().isNotEmpty) brand,
-      if ((v.size ?? '').isNotEmpty) '${l.sizeLabel} ${v.size}',
-      if ((v.color ?? '').isNotEmpty) '${l.colorLabel} ${v.color}',
-      '${l.skuLabel} ${v.sku ?? ''}',
-      if ((v.barcode ?? '').isNotEmpty) '${l.barcodeLabel} ${v.barcode}',
-    ].join('  •  ');
+    final parts = <String>[];
+    if (brand != null && brand.trim().isNotEmpty) parts.add(brand);
+    if ((v.size ?? '').isNotEmpty) parts.add('${l.sizeLabel} ${v.size}');
+    if ((v.color ?? '').isNotEmpty) parts.add('${l.colorLabel} ${v.color}');
+    parts.add('${l.skuLabel} ${v.sku ?? ''}');
+    if ((v.barcode ?? '').isNotEmpty)
+      parts.add('${l.barcodeLabel} ${v.barcode}');
+    final subtitle = parts.join('  •  ');
     final qty =
-        '${l.quantityLabel} ${v.quantity} — ${l.priceLabel} ${money(context, v.salePrice)}';
+        '${l.quantityLabel} ${v.quantity} - ${l.priceLabel} ${money(context, v.salePrice)}';
     final style = row.isLowStock
         ? const TextStyle(color: CupertinoColors.systemRed)
         : const TextStyle(color: CupertinoColors.label);
@@ -315,7 +272,13 @@ class _InventoryRow extends StatelessWidget {
         style: style,
         textDirection: TextDirection.rtl,
       ),
-      subtitle: Text(subtitle, textDirection: TextDirection.rtl),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(subtitle, textDirection: TextDirection.rtl),
+          VariantAttributesDisplay(attributes: v.attributes),
+        ],
+      ),
       trailing: Text(qty, style: style),
     );
   }

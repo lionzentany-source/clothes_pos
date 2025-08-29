@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/attributes/screens/manage_attributes_screen.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:clothes_pos/presentation/attributes/bloc/attributes_cubit.dart';
 import 'package:clothes_pos/data/repositories/attribute_repository.dart';
 import 'package:clothes_pos/data/datasources/attribute_dao.dart';
@@ -23,7 +24,11 @@ class FakeAttributeDao implements AttributeDao {
 
   @override
   Future<int> createAttributeValue(AttributeValue value) async {
-    final v = AttributeValue(id: _nextValueId++, attributeId: value.attributeId, value: value.value);
+    final v = AttributeValue(
+      id: _nextValueId++,
+      attributeId: value.attributeId,
+      value: value.value,
+    );
     _values.putIfAbsent(value.attributeId, () => []).add(v);
     return v.id!;
   }
@@ -51,10 +56,12 @@ class FakeAttributeDao implements AttributeDao {
   Future<List<Attribute>> getAllAttributes() async => List.of(_attrs);
 
   @override
-  Future<Attribute> getAttributeById(int id) async => _attrs.firstWhere((a) => a.id == id);
+  Future<Attribute> getAttributeById(int id) async =>
+      _attrs.firstWhere((a) => a.id == id);
 
   @override
-  Future<List<AttributeValue>> getAttributeValues(int attributeId) async => List.of(_values[attributeId] ?? []);
+  Future<List<AttributeValue>> getAttributeValues(int attributeId) async =>
+      List.of(_values[attributeId] ?? []);
 
   @override
   Future<int> updateAttribute(Attribute attribute) async {
@@ -73,7 +80,16 @@ class FakeAttributeDao implements AttributeDao {
   }
 
   @override
-  Future<List<AttributeValue>> getAttributeValuesForVariant(int variantId) async => [];
+  Future<List<AttributeValue>> getAttributeValuesForVariant(
+    int variantId,
+  ) async => [];
+
+  @override
+  Future<Map<int, List<AttributeValue>>> getAttributeValuesForVariantIds(
+    List<int> variantIds,
+  ) async {
+    return <int, List<AttributeValue>>{};
+  }
 }
 
 void main() {
@@ -86,6 +102,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider.value(
           value: cubit,
           child: const ManageAttributesScreen(),
@@ -100,21 +118,26 @@ void main() {
     await tester.tap(find.byIcon(CupertinoIcons.add).first);
     await tester.pumpAndSettle();
 
-  // Tap Add within the add-dialog
-  final addDialog = find.byType(CupertinoAlertDialog).first;
-  final addAction = find.descendant(of: addDialog, matching: find.text('Add'));
-  await tester.tap(addAction);
+    // Tap Add within the add-dialog
+    final addDialog = find.byType(CupertinoAlertDialog).first;
+    final addAction = find.descendant(
+      of: addDialog,
+      matching: find.text('Add'),
+    );
+    await tester.tap(addAction);
     await tester.pumpAndSettle();
 
     // Expect validation error dialog
-    expect(find.text('Name is required.'), findsOneWidget);
+    expect(find.text('Name is required'), findsOneWidget);
 
     // Dismiss
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
   });
 
-  testWidgets('Add attribute rejects duplicate name (case-insensitive)', (tester) async {
+  testWidgets('Add attribute rejects duplicate name (case-insensitive)', (
+    tester,
+  ) async {
     final fakeDao = FakeAttributeDao();
     final repo = AttributeRepository(fakeDao);
     final cubit = AttributesCubit(repo);
@@ -127,6 +150,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider.value(
           value: cubit,
           child: const ManageAttributesScreen(),
@@ -136,22 +161,25 @@ void main() {
 
     await tester.pumpAndSettle();
 
-  // Open add dialog
-  await tester.tap(find.byIcon(CupertinoIcons.add).first);
-  await tester.pumpAndSettle();
+    // Open add dialog
+    await tester.tap(find.byIcon(CupertinoIcons.add).first);
+    await tester.pumpAndSettle();
 
-  // Ensure the dialog's text field is present
-  expect(find.byType(CupertinoTextField), findsOneWidget);
+    // Ensure the dialog's text field is present
+    expect(find.byType(CupertinoTextField), findsOneWidget);
 
-  // Enter duplicate name with different case
-  await tester.enterText(find.byType(CupertinoTextField), 'color');
-  final addDialog2 = find.byType(CupertinoAlertDialog).first;
-  final addAction2 = find.descendant(of: addDialog2, matching: find.text('Add'));
-  await tester.tap(addAction2);
-  await tester.pumpAndSettle();
+    // Enter duplicate name with different case
+    await tester.enterText(find.byType(CupertinoTextField), 'color');
+    final addDialog2 = find.byType(CupertinoAlertDialog).first;
+    final addAction2 = find.descendant(
+      of: addDialog2,
+      matching: find.text('Add'),
+    );
+    await tester.tap(addAction2);
+    await tester.pumpAndSettle();
 
-  // Ensure repository did not add a duplicate (robust assertion)
-  final attrs = await fakeDao.getAllAttributes();
-  expect(attrs.length, 1);
+    // Ensure repository did not add a duplicate (robust assertion)
+    final attrs = await fakeDao.getAllAttributes();
+    expect(attrs.length, 1);
   });
 }

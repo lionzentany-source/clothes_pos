@@ -7,6 +7,36 @@ import 'speech_service.dart';
 import 'tts_service.dart';
 import 'checklist_data.dart';
 import 'tutorial_overlay.dart';
+import '../data/repositories/settings_repository.dart';
+import '../core/di/locator.dart';
+
+// Checklist item with persistent storage
+class PersistentChecklistItem extends ChecklistItem {
+  final SettingsRepository _repo;
+
+  PersistentChecklistItem({
+    required super.id,
+    required super.title,
+    required super.description,
+    required super.category,
+    super.iconName,
+    super.helpLink,
+    super.difficulty = 1,
+    super.isDone = false,
+    required SettingsRepository repo,
+  }) : _repo = repo;
+
+  Future<void> setDone(bool done) async {
+    isDone = done;
+    await _repo.set('checklist_$id', done ? '1' : '0');
+  }
+
+  Future<bool> loadStatus() async {
+    final status = await _repo.get('checklist_$id');
+    isDone = status == '1';
+    return isDone;
+  }
+}
 
 class AssistantScreen extends StatefulWidget {
   const AssistantScreen({super.key});
@@ -30,7 +60,42 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Timer? _autoStop;
   Timer? _breath;
   bool _gotLevel = false;
-  List<ChecklistItem> _checklist = [];
+  List<PersistentChecklistItem> _checklist = [];
+  final _repo = sl<SettingsRepository>();
+
+  @override
+  void initState() {
+    super.initState();
+    _speech = FakeSpeechService();
+    _tts = TtsService();
+    _init();
+    _loadChecklist();
+  }
+
+  Future<void> _loadChecklist() async {
+    final List<PersistentChecklistItem> items = [];
+
+    for (final item in checklistItems) {
+      final persistentItem = PersistentChecklistItem(
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        category: item.category,
+        iconName: item.iconName,
+        helpLink: item.helpLink,
+        difficulty: item.difficulty,
+        isDone: item.isDone,
+        repo: _repo,
+      );
+
+      await persistentItem.loadStatus();
+      items.add(persistentItem);
+    }
+
+    setState(() {
+      _checklist = items;
+    });
+  }
 
   void _startBreathing() {
     _breath?.cancel();
@@ -57,15 +122,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
   bool _isLikelyArabic(String s) {
     final ar = RegExp(r'[\u0621-\u064A]');
     return ar.hasMatch(s);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _checklist = checklistItems;
-    _speech = STTSpeechService();
-    _tts = TtsService();
-    _init();
   }
 
   void _attachStreams() {
@@ -187,6 +243,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
   }
 
   Widget _buildChecklist() {
+    // تنظيم العناصر حسب الفئة
+    final Map<String, List<PersistentChecklistItem>> categorizedItems = {};
+    for (final item in _checklist) {
+      if (!categorizedItems.containsKey(item.category)) {
+        categorizedItems[item.category] = [];
+      }
+      categorizedItems[item.category]!.add(item);
+    }
+
+    // حساب نسبة الإكمال الإجمالية
+    final completionPercentage = getTotalCompletionPercentage() * 100;
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
@@ -196,40 +264,161 @@ class _AssistantScreenState extends State<AssistantScreen> {
               'قائمة البداية السريعة',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
+            subtitle: Text(
+              'أكملت ${completionPercentage.toStringAsFixed(0)}% من المهام',
+              style: const TextStyle(fontSize: 12),
+            ),
             trailing: CupertinoButton(
               padding: EdgeInsets.zero,
               child: const Text('شرح'),
               onPressed: () async {
-                await showTutorial(context, [
-                  const TutorialStep(
-                    title: 'إضافة أول منتج',
-                    description:
-                        'من تبويب المخزون، افتح المنتجات ثم اضغط + لإضافة منتج وأدخل التفاصيل واحفظ.',
-                  ),
-                  const TutorialStep(
-                    title: 'إجراء أول عملية بيع',
-                    description:
-                        'من تبويب المبيعات، أضف العناصر إلى السلة ثم اضغط إتمام البيع واختر وسيلة الدفع.',
-                  ),
-                  const TutorialStep(
-                    title: 'فتح جلسة صندوق',
-                    description:
-                        'عند أول عملية بيع سيُطلب فتح الجلسة. أدخل الرصيد الافتتاحي وابدأ العمل.',
-                  ),
-                ]);
+                // إنشاء خطوات البرنامج التعليمي من العناصر المحددة
+                final tutorialSteps = _checklist
+                    .where((item) => !item.isDone)
+                    .take(5)
+                    .map(
+                      (item) => TutorialStep(
+                        title: item.title,
+                        description: item.description,
+                      ),
+                    )
+                    .toList();
+
+                if (tutorialSteps.isNotEmpty) {
+                  await showTutorial(context, tutorialSteps);
+                } else {
+                  // إذا تم إكمال جميع المهام، عرض رسالة تهنئة
+                  await showCupertinoDialog(
+                    context: context,
+                    builder: (_) => CupertinoAlertDialog(
+                      title: const Text('تهانينا!'),
+                      content: const Text(
+                        'لقد أكملت جميع المهام في قائمة البدء السريع.',
+                      ),
+                      actions: [
+                        CupertinoDialogAction(
+                          child: const Text('حسناً'),
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               },
             ),
           ),
-          ..._checklist.map((item) {
-            return CheckboxListTile(
-              title: Text(item.title),
-              subtitle: Text(item.description),
-              value: item.isDone,
-              onChanged: (bool? value) {
-                setState(() {
-                  item.isDone = value ?? false;
-                });
-              },
+
+          // شريط التقدم الإجمالي
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                minHeight: 8,
+                value: getTotalCompletionPercentage(),
+                backgroundColor: CupertinoColors.systemGrey5,
+                color: CupertinoColors.activeGreen,
+              ),
+            ),
+          ),
+
+          // عرض العناصر مصنفة
+          ...categorizedItems.entries.map((entry) {
+            final categoryName = entry.key;
+            final items = entry.value;
+            final categoryCompletion = getCategoryCompletionPercentage(
+              categoryName,
+            );
+
+            return ExpansionTile(
+              title: Row(
+                children: [
+                  Text(
+                    categoryName,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${(categoryCompletion * 100).toStringAsFixed(0)}%',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: CupertinoColors.systemGrey,
+                    ),
+                  ),
+                ],
+              ),
+              leading: Icon(_getCategoryIcon(categoryName)),
+              children: items.map((item) {
+                return CheckboxListTile(
+                  title: Text(item.title),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(item.description),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          ...List.generate(
+                            item.difficulty,
+                            (index) => const Icon(
+                              CupertinoIcons.star_fill,
+                              size: 14,
+                              color: CupertinoColors.systemYellow,
+                            ),
+                          ),
+                          ...List.generate(
+                            3 - item.difficulty,
+                            (index) => const Icon(
+                              CupertinoIcons.star,
+                              size: 14,
+                              color: CupertinoColors.systemGrey3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  value: item.isDone,
+                  onChanged: (bool? value) async {
+                    final newValue = value ?? false;
+                    await item.setDone(newValue);
+                    setState(() {
+                      // تحديث العنصر في القائمة
+                      final index = _checklist.indexWhere(
+                        (i) => i.id == item.id,
+                      );
+                      if (index != -1) {
+                        _checklist[index] = item;
+                      }
+                    });
+                  },
+                  secondary: item.helpLink != null
+                      ? IconButton(
+                          icon: const Icon(CupertinoIcons.question_circle),
+                          onPressed: () {
+                            // عرض مساعدة إضافية
+                            showCupertinoDialog(
+                              context: context,
+                              builder: (_) => CupertinoAlertDialog(
+                                title: Text(item.title),
+                                content: Text(item.description),
+                                actions: [
+                                  CupertinoDialogAction(
+                                    child: const Text('حسناً'),
+                                    onPressed: () =>
+                                        Navigator.of(context).pop(),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        )
+                      : null,
+                );
+              }).toList(),
             );
           }),
         ],
@@ -237,37 +426,252 @@ class _AssistantScreenState extends State<AssistantScreen> {
     );
   }
 
-  List<Widget> _buildCategorizedFaq(BuildContext context) {
-    final faqs = allFaq();
-    final categories = <String, List<FaqEntry>>{};
-    for (final faq in faqs) {
-      final cat = faq.category ?? 'متفرقات';
-      categories.putIfAbsent(cat, () => []).add(faq);
+  // الحصول على أيقونة مناسبة لكل فئة
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'أساسيات':
+        return CupertinoIcons.house_fill;
+      case 'المخزون':
+        return CupertinoIcons.cube_box_fill;
+      case 'المبيعات':
+        return CupertinoIcons.cart_fill;
+      case 'المالية':
+        return CupertinoIcons.money_dollar_circle_fill;
+      case 'التقارير':
+        return CupertinoIcons.chart_bar_fill;
+      case 'متقدم':
+        return CupertinoIcons.gear_alt_fill;
+      default:
+        return CupertinoIcons.checkmark_circle_fill;
     }
+  }
 
-    return categories.entries.map((entry) {
-      return Card(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        child: ExpansionTile(
-          title: Text(entry.key),
-          children: entry.value.map((faq) {
-            return ListTile(
-              title: Text(faq.question),
-              subtitle: Text(faq.answer),
-              onTap: () {
-                setState(() {
-                  _heard = faq.question;
-                  _answer = faq.answer;
-                });
-                if (_voiceReplies) {
-                  _tts.speak(faq.answer);
-                }
-              },
-            );
-          }).toList(),
+  // الحصول على أيقونة مناسبة لكل فئة من الأسئلة الشائعة
+  IconData _getFaqCategoryIcon(String category) {
+    switch (category) {
+      case 'الفواتير والمبيعات':
+        return CupertinoIcons.cart_fill;
+      case 'المصروفات':
+        return CupertinoIcons.money_dollar_circle_fill;
+      case 'الإعدادات والبيانات':
+        return CupertinoIcons.settings_solid;
+      case 'المنتجات والمخزون':
+        return CupertinoIcons.cube_box_fill;
+      case 'التقارير':
+        return CupertinoIcons.chart_bar_fill;
+      case 'العملاء':
+        return CupertinoIcons.person_2_fill;
+      case 'الموردين':
+        return CupertinoIcons.bus;
+      case 'الذكاء الاصطناعي':
+        return CupertinoIcons.wand_stars;
+      default:
+        return CupertinoIcons.question_circle_fill;
+    }
+  }
+
+  // الحصول على أيقونة مناسبة للسؤال الشائع
+  IconData _getFaqIcon(String iconName) {
+    switch (iconName) {
+      case 'receipt':
+        return CupertinoIcons.doc_text;
+      case 'print':
+        return CupertinoIcons.printer;
+      case 'point_of_sale':
+        return CupertinoIcons.creditcard;
+      case 'account_balance':
+        return CupertinoIcons.money_dollar;
+      case 'discount':
+        return CupertinoIcons.tag;
+      case 'cancel':
+        return CupertinoIcons.xmark_circle;
+      case 'search':
+        return CupertinoIcons.search;
+      case 'payments':
+        return CupertinoIcons.money_dollar_circle;
+      case 'category':
+        return CupertinoIcons.square_grid_2x2;
+      case 'bar_chart':
+        return CupertinoIcons.chart_bar;
+      case 'backup':
+        return CupertinoIcons.cloud_upload;
+      case 'restore':
+        return CupertinoIcons.cloud_download;
+      case 'settings':
+        return CupertinoIcons.settings;
+      case 'inventory':
+        return CupertinoIcons.cube_box;
+      case 'edit':
+        return CupertinoIcons.pencil;
+      case 'qr_code':
+        return CupertinoIcons.qrcode;
+      case 'checklist':
+        return CupertinoIcons.list_bullet;
+      case 'trending_up':
+        return CupertinoIcons.graph_circle;
+      case 'person_add':
+        return CupertinoIcons.person_add;
+      case 'local_shipping':
+        return CupertinoIcons.car;
+      case 'smart_toy':
+        return CupertinoIcons.wand_stars;
+      case 'mic':
+        return CupertinoIcons.mic;
+      default:
+        return CupertinoIcons.info_circle;
+    }
+  }
+
+  List<Widget> _buildCategorizedFaq(BuildContext context) {
+    // استخدام الدالة الجديدة للحصول على جميع الفئات
+    final categories = getAllFaqCategories();
+    final popularFaqs = getPopularFaq();
+
+    final List<Widget> widgets = [];
+
+    // إضافة قسم الأسئلة الشائعة في الأعلى
+    if (popularFaqs.isNotEmpty) {
+      widgets.add(
+        Card(
+          margin: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text(
+                  'الأسئلة الأكثر شيوعاً',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const Divider(height: 1),
+              ...popularFaqs.map((faq) => _buildFaqTile(faq)),
+            ],
+          ),
         ),
       );
-    }).toList();
+    }
+
+    // إضافة الأسئلة حسب الفئات
+    for (final category in categories) {
+      final categoryFaqs = getFaqByCategory(category);
+      if (categoryFaqs.isEmpty) continue;
+
+      widgets.add(
+        Card(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          child: ExpansionTile(
+            title: Text(category),
+            leading: Icon(_getFaqCategoryIcon(category)),
+            children: categoryFaqs.map((faq) => _buildFaqTile(faq)).toList(),
+          ),
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  // بناء عنصر واجهة للسؤال الشائع
+  Widget _buildFaqTile(FaqEntry faq) {
+    return ExpansionTile(
+      title: Text(
+        faq.question,
+        style: const TextStyle(fontWeight: FontWeight.w500),
+      ),
+      leading: faq.iconName != null ? Icon(_getFaqIcon(faq.iconName!)) : null,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // إضافة صورة توضيحية إذا كانت متوفرة
+              if (faq.imageUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      faq.imageUrl!,
+                      height: 150,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.asset(
+                      'images/faq/product_placeholder.svg',
+                      height: 150,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              Text(faq.answer),
+              if (faq.relatedQuestions != null &&
+                  faq.relatedQuestions!.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 16),
+                    const Text(
+                      'أسئلة ذات صلة:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    ...getRelatedFaq(faq.id).map(
+                      (relatedFaq) => InkWell(
+                        onTap: () {
+                          setState(() {
+                            _heard = relatedFaq.question;
+                            _answer = relatedFaq.answer;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4.0),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                CupertinoIcons.arrow_right_circle,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  relatedFaq.question,
+                                  style: const TextStyle(
+                                    color: CupertinoColors.activeBlue,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ],
+      onExpansionChanged: (expanded) {
+        if (expanded) {
+          setState(() {
+            _heard = faq.question;
+            _answer = faq.answer;
+          });
+
+          if (_voiceReplies) {
+            _tts.speak(faq.answer);
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -297,7 +701,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     style: TextStyle(fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 6),
-                  Text(_heard.isEmpty ? '—' : _heard),
+                  Text(_heard.isEmpty ? '-' : _heard),
                 ],
               ),
             ),
@@ -319,7 +723,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   if (_processing)
                     const CupertinoActivityIndicator()
                   else
-                    Text(_answer.isEmpty ? '—' : _answer),
+                    Text(_answer.isEmpty ? '-' : _answer),
                 ],
               ),
             ),

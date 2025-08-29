@@ -64,12 +64,23 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
         title: Text(AppLocalizations.of(context).openSessionTitle),
         content: Column(
           children: [
-            const SizedBox(height: 8),
-            CupertinoTextField(
-              placeholder: AppLocalizations.of(context).openingFloat,
-              controller: ctrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      placeholder: AppLocalizations.of(context).openingFloat,
+                      controller: ctrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -109,12 +120,25 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
         ),
         content: Column(
           children: [
-            const SizedBox(height: 8),
-            CupertinoTextField(
-              placeholder: AppLocalizations.of(context).actualDrawerAmount,
-              controller: ctrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      placeholder: AppLocalizations.of(
+                        context,
+                      ).actualDrawerAmount,
+                      controller: ctrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -178,18 +202,29 @@ class _CashSessionScreenState extends State<CashSessionScreen> {
         ),
         content: Column(
           children: [
-            const SizedBox(height: 8),
-            CupertinoTextField(
-              placeholder: AppLocalizations.of(context).amount,
-              controller: ctrl,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      placeholder: AppLocalizations.of(context).amount,
+                      controller: ctrl,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      placeholder: AppLocalizations.of(context).reasonOptional,
+                      controller: reasonCtrl,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            CupertinoTextField(
-              placeholder: AppLocalizations.of(context).reasonOptional,
-              controller: reasonCtrl,
             ),
           ],
         ),

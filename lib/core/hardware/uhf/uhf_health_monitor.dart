@@ -4,6 +4,7 @@ import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader_bridge.dart';
 import 'package:clothes_pos/core/hardware/uhf/models.dart';
 import 'package:clothes_pos/core/logging/app_logger.dart';
+import 'package:clothes_pos/data/repositories/settings_repository.dart';
 
 /// Periodically checks UHF reader availability and attempts recovery.
 class UHFHealthMonitor {
@@ -26,6 +27,13 @@ class UHFHealthMonitor {
     if (_checking) return;
     _checking = true;
     try {
+      // Check RFID toggle from settings before any hardware operation
+      final settingsRepo = sl<SettingsRepository>();
+      final enabled = await settingsRepo.get('rfid_enabled');
+      if (enabled != '1' && enabled != 'true') {
+        AppLogger.i('UHF health: skipped (rfid disabled)');
+        return;
+      }
       final reader = sl<UHFReader>();
       if (reader is UHFReaderBridgeProcess) {
         if (reader.status == UHFStatus.unavailable) {

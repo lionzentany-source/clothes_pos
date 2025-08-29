@@ -17,7 +17,7 @@ class AdvancedProductSearchScreen extends StatefulWidget {
   /// Opens the advanced search as a Cupertino popup sheet (modal) instead of a full page.
   static Future<void> open(BuildContext context) => showCupertinoModalPopup(
     context: context,
-    barrierColor: CupertinoColors.systemGrey.withOpacity(0.25),
+    barrierColor: CupertinoColors.systemGrey.withValues(alpha: 0.25),
     builder: (_) => const AdvancedProductSearchScreen(),
   );
 
@@ -48,11 +48,11 @@ class _AdvancedProductSearchScreenState
     final repo = sl<ProductRepository>();
     final colors = await repo.distinctColors(limit: 200);
     final sizes = await repo.distinctSizes(limit: 200);
+    if (!mounted) return;
     final cats = context
         .read<PosCubit>()
         .state
         .categories; // already loaded in POS
-    if (!mounted) return;
     setState(() {
       _allColors = colors;
       _allSizes = sizes;
@@ -177,13 +177,13 @@ class _AdvancedProductSearchScreenState
                     ),
                     CupertinoButton(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      minSize: 28,
+                      minimumSize: const Size(28, 28),
                       onPressed: _reset,
                       child: const Text('مسح', style: TextStyle(fontSize: 13)),
                     ),
                     CupertinoButton(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      minSize: 28,
+                      minimumSize: const Size(28, 28),
                       onPressed: () => Navigator.of(context).pop(),
                       child: Icon(
                         CupertinoIcons.clear_circled_solid,
@@ -236,7 +236,9 @@ class _AdvancedProductSearchScreenState
                                 delegate: SliverChildBuilderDelegate(
                                   (context, i) => ProductGridItem(
                                     variant: _results[i],
-                                    square: true,
+                                    width:
+                                        260, // نفس عرض البطاقة في شاشة البيع الرئيسية
+                                    square: false,
                                     onTap: () {
                                       context.read<PosCubit>().addToCart(
                                         _results[i]['id'] as int,
@@ -252,7 +254,8 @@ class _AdvancedProductSearchScreenState
                                       crossAxisCount: 3,
                                       mainAxisSpacing: AppSpacing.xs,
                                       crossAxisSpacing: AppSpacing.xs,
-                                      childAspectRatio: 1,
+                                      childAspectRatio:
+                                          2.2, // نفس نسبة البطاقة في شاشة البيع
                                     ),
                               ),
                       ),
@@ -344,7 +347,8 @@ class _ColorCircle extends StatelessWidget {
   });
 
   Color _parse(String v) {
-    const map = {
+    const colorMap = {
+      // English
       'red': 0xFFE53935,
       'blue': 0xFF1E88E5,
       'green': 0xFF43A047,
@@ -357,9 +361,43 @@ class _ColorCircle extends StatelessWidget {
       'brown': 0xFF6D4C41,
       'grey': 0xFF757575,
       'gray': 0xFF757575,
+      'silver': 0xFFC0C0C0,
+      // Arabic
+      'أسود': 0xFF000000,
+      'أبيض': 0xFFFFFFFF,
+      'أحمر': 0xFFE53935,
+      'أزرق': 0xFF1E88E5,
+      'أخضر': 0xFF43A047,
+      'أصفر': 0xFFFBC02D,
+      'برتقالي': 0xFFFB8C00,
+      'بنفسجي': 0xFF8E24AA,
+      'وردي': 0xFFD81B60,
+      'بني': 0xFF6D4C41,
+      'رمادي': 0xFF757575,
+      'رمادى': 0xFF757575,
+      'رصاصي': 0xFFC0C0C0,
+      'فضي': 0xFFC0C0C0,
+      'ذهبي': 0xFFFFD700,
+      'كحلي': 0xFF001F3F,
+      'سماوي': 0xFF81D4FA,
+      'عنابي': 0xFF800000,
+      'زيتي': 0xFF556B2F,
+      'موف': 0xFFB39DDB,
+      'تركواز': 0xFF1DE9B6,
+      'بيج': 0xFFF5F5DC,
+      'أخضر فاتح': 0xFFB2FF59,
+      'أخضر غامق': 0xFF388E3C,
+      'أزرق فاتح': 0xFF90CAF9,
+      'أزرق غامق': 0xFF0D47A1,
+      'وردي فاتح': 0xFFF8BBD0,
+      'وردي غامق': 0xFFC2185B,
+      'برتقالي فاتح': 0xFFFFE0B2,
+      'برتقالي غامق': 0xFFF57C00,
+      'بني فاتح': 0xFFD7CCC8,
+      'بني غامق': 0xFF4E342E,
     };
     final lower = v.toLowerCase().trim();
-    if (map.containsKey(lower)) return Color(map[lower]!);
+    if (colorMap.containsKey(lower)) return Color(colorMap[lower]!);
     final hex = RegExp(r'^#?([0-9a-fA-F]{6})$').firstMatch(lower);
     if (hex != null) return Color(int.parse('0xFF${hex.group(1)}'));
     return const Color(0xFF9E9E9E);

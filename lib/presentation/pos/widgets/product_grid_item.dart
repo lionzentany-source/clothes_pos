@@ -1,13 +1,14 @@
+import 'package:clothes_pos/core/config/feature_flags.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:clothes_pos/data/models/product_variant.dart';
-import 'package:clothes_pos/data/models/inventory_item_row.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:clothes_pos/presentation/pos/widgets/shimmer.dart';
-import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
 import 'package:clothes_pos/presentation/design/system/app_typography.dart';
+import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
 import 'package:clothes_pos/presentation/design/system/app_theme.dart';
-import 'package:clothes_pos/presentation/design/system/ui_density.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
+import 'package:clothes_pos/data/models/product_variant.dart';
+import 'package:clothes_pos/data/models/inventory_item_row.dart';
+import 'dart:io';
 
 /// Single product/variant tile for the POS product results grid.
 /// Expects a dynamic [variant] row with at least: id, salePrice, name/parent_name/sku.
@@ -42,15 +43,15 @@ class ProductGridItem extends StatelessWidget {
     // Order: parent_name -> name -> sku -> fallback
     if (v is InventoryItemRow) {
       if (v.parentName.isNotEmpty) return v.parentName;
-      return v.variant.sku ?? 'Item ${v.variant.id ?? ''}';
+      return v.variant.sku ?? 'Variant';
     }
     if (v is ProductVariant) {
-      return v.sku ?? 'Item ${v.id ?? ''}';
+      return v.sku ?? 'Variant';
     }
     final parent = _read<Object?>(v, 'parent_name');
     final name = _read<Object?>(v, 'name');
     final sku = _read<Object?>(v, 'sku');
-    return (parent ?? name ?? sku ?? 'Item').toString();
+    return (parent ?? name ?? sku ?? 'Variant').toString();
   }
 
   double _salePrice(dynamic v) {
@@ -58,18 +59,6 @@ class ProductGridItem extends StatelessWidget {
     if (v is ProductVariant) return v.salePrice;
     final p = _read<num>(v, 'sale_price') ?? _read<num>(v, 'salePrice');
     return (p ?? 0).toDouble();
-  }
-
-  int? _quantity(dynamic v) {
-    if (v is InventoryItemRow) return v.variant.quantity;
-    if (v is ProductVariant) return v.quantity;
-    return _read<num>(v, 'quantity')?.toInt();
-  }
-
-  String? _size(dynamic v) {
-    if (v is InventoryItemRow) return v.variant.size;
-    if (v is ProductVariant) return v.size;
-    return _read<Object?>(v, 'size')?.toString();
   }
 
   String? _color(dynamic v) {
@@ -82,153 +71,274 @@ class ProductGridItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final name = loading ? '' : _displayName(variant);
     final price = loading ? 0.0 : _salePrice(variant);
-    final qty = loading ? null : _quantity(variant); // may be null
     final c = context.colors;
-    final density = DensityConfig.of(context);
-    final thumbH = DensityConfig.productThumb(density);
-    final content = Column(
-      mainAxisAlignment: square
-          ? MainAxisAlignment.start
-          : MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (square)
+    final colorStr = _color(variant);
+    Color? borderColor;
+    if (colorStr != null && colorStr.trim().isNotEmpty) {
+      // Try to parse known color names or hex
+      final lower = colorStr.toLowerCase().trim();
+      const colorMap = {
+        // 12 Basic Colors (English & Arabic)
+        'red': 0xFFFF0000,
+        'أحمر': 0xFFFF0000,
+        'blue': 0xFF0000FF,
+        'أزرق': 0xFF0000FF,
+        'green': 0xFF008000,
+        'أخضر': 0xFF008000,
+        'yellow': 0xFFFFFF00,
+        'أصفر': 0xFFFFFF00,
+        'orange': 0xFFFFA500,
+        'برتقالي': 0xFFFFA500,
+        'purple': 0xFF800080,
+        'بنفسجي': 0xFF800080,
+        'pink': 0xFFFFC0CB,
+        'وردي': 0xFFFFC0CB,
+        'brown': 0xFFA52A2A,
+        'بني': 0xFFA52A2A,
+        'black': 0xFF000000,
+        'أسود': 0xFF000000,
+        'white': 0xFFFFFFFF,
+        'أبيض': 0xFFFFFFFF,
+        'grey': 0xFF808080,
+        'gray': 0xFF808080,
+        'رمادي': 0xFF808080,
+        // ...باقي الألوان السابقة...
+        'silver': 0xFFC0C0C0,
+        'رصاصي': 0xFFC0C0C0,
+        'فضي': 0xFFC0C0C0,
+        'ذهبي': 0xFFFFD700,
+        'كحلي': 0xFF001F3F,
+        'سماوي': 0xFF81D4FA,
+        'عنابي': 0xFF800000,
+        'زيتي': 0xFF556B2F,
+        'موف': 0xFFB39DDB,
+        'تركواز': 0xFF1DE9B6,
+        'بيج': 0xFFF5F5DC,
+        'أخضر فاتح': 0xFFB2FF59,
+        'أخضر غامق': 0xFF388E3C,
+        'أزرق فاتح': 0xFF90CAF9,
+        'أزرق غامق': 0xFF0D47A1,
+        'وردي فاتح': 0xFFF8BBD0,
+        'وردي غامق': 0xFFC2185B,
+        'برتقالي فاتح': 0xFFFFE0B2,
+        'برتقالي غامق': 0xFFF57C00,
+        'بني فاتح': 0xFFD7CCC8,
+        'بني غامق': 0xFF4E342E,
+      };
+      if (colorMap.containsKey(lower)) {
+        borderColor = Color(colorMap[lower]!);
+      } else if (RegExp(r'^#?([0-9a-fA-F]{6})').hasMatch(lower)) {
+        final hex = RegExp(r'^#?([0-9a-fA-F]{6})').firstMatch(lower);
+        borderColor = Color(int.parse('0xFF${hex!.group(1)}'));
+      } else {
+        borderColor = c.border;
+      }
+    }
+    if (borderColor == null || (colorStr == null || colorStr.trim().isEmpty)) {
+      borderColor = c.border;
+    }
+
+    // Debug info removed - use AppLogger.d if needed for debugging
+
+    // Extract variables
+    String? size;
+    String? color;
+    int? quantity;
+    if (variant is InventoryItemRow) {
+      size = variant.variant.size;
+      color = variant.variant.color;
+      quantity = variant.variant.quantity;
+    } else if (variant is ProductVariant) {
+      size = variant.size;
+      color = variant.color;
+      quantity = variant.quantity;
+    } else {
+      size = _read<Object?>(variant, 'size')?.toString();
+      color = _read<Object?>(variant, 'color')?.toString();
+      quantity = _read<num>(variant, 'quantity')?.toInt();
+    }
+
+    final content = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Product image on the right
+          if (!loading)
+            _buildProductImage(context, variant)
+          else
+            const Shimmer(width: 44, height: 36),
+
+          const SizedBox(width: 8),
+
+          // Text content on the left
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: c.surface,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: c.border),
-              ),
-              alignment: Alignment.center,
-              child: loading
-                  ? const Shimmer(width: 48, height: 32)
-                  : SvgPicture.asset(
-                      'assets/svg/product_placeholder.svg',
-                      width: 36,
-                      height: 36,
-                      colorFilter: ColorFilter.mode(
-                        c.textSecondary.withOpacity(.45),
-                        BlendMode.srcIn,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (!loading)
+                  Text(
+                    name,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyStrong.copyWith(
+                      color: c.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                else
+                  const Shimmer(width: 80, height: 14),
+
+                if (!loading)
+                  Text(
+                    money(context, price),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyStrong.copyWith(
+                      color: c.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                else
+                  const Shimmer(width: 50, height: 12),
+
+                if (!loading && quantity != null)
+                  Text(
+                    'الكمية: $quantity',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyStrong.copyWith(
+                      color: c.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                if (!loading)
+                  if (FeatureFlags.useDynamicAttributes)
+                    _buildAttributes(context, variant)
+                  else if (size != null || color != null)
+                    Text(
+                      [
+                        if (color != null && color.isNotEmpty) 'اللون: $color',
+                        if (size != null && size.isNotEmpty) 'المقاس: $size',
+                      ].join(' • '),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodyStrong.copyWith(
+                        color: c.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-            ),
-          )
-        else
-          Container(
-            height: thumbH,
-            decoration: BoxDecoration(
-              color: c.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: c.border),
-            ),
-            alignment: Alignment.center,
-            child: loading
-                ? const Shimmer(width: 48, height: 32)
-                : SvgPicture.asset(
-                    'assets/svg/product_placeholder.svg',
-                    width: 40,
-                    height: 40,
-                    colorFilter: ColorFilter.mode(
-                      c.textSecondary.withOpacity(.45),
-                      BlendMode.srcIn,
-                    ),
-                  ),
-          ),
-        SizedBox(height: square ? 3 : AppSpacing.xxs),
-        if (!loading)
-          _VariantBadges(
-            data: {'size': _size(variant), 'color': _color(variant)},
-            density: density,
-          ),
-        if (!loading) const SizedBox(height: 2),
-        if (!loading)
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.bodyStrong.copyWith(
-              color: c.textPrimary,
-              fontSize: square ? 11 : null,
-            ),
-          )
-        else
-          const Shimmer(width: 80, height: 12),
-        SizedBox(height: square ? 1 : AppSpacing.xxs),
-        if (!loading)
-          Text(
-            money(context, price),
-            style: AppTypography.caption.copyWith(
-              color: c.textSecondary,
-              fontSize: square ? 10 : null,
-            ),
-          )
-        else
-          const Shimmer(width: 50, height: 10),
-        if (showStockBadge && qty != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 2),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xxs + 2,
-                  vertical: AppSpacing.xxs / 2,
-                ),
-                decoration: BoxDecoration(
-                  color: qty > 0 ? c.successContainer : c.dangerContainer,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  qty > 0 ? 'Stock: ${qty.toInt()}' : 'Out',
-                  style: AppTypography.caption.copyWith(
-                    color: qty > 0 ? c.success : c.danger,
-                    fontSize: AppTypography.fs10,
-                  ),
-                ),
-              ),
+              ],
             ),
           ),
-      ],
+        ],
+      ),
     );
+
     return SizedBox(
       width: width,
       child: CupertinoButton(
-        padding: EdgeInsets.all(square ? 6 : AppSpacing.sm),
-        color: c.surfaceAlt,
+        padding: EdgeInsets.zero,
         onPressed: onTap,
-        child: square ? content : content,
+        child: _borderWrapper(
+          context: context,
+          child: content,
+          borderColor: borderColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAttributes(BuildContext context, dynamic variant) {
+    // Support multiple shapes: model objects, InventoryItemRow, or raw Map rows
+    List<dynamic>? attributes;
+    if (variant is InventoryItemRow) {
+      attributes = variant.variant.attributes;
+    } else if (variant is ProductVariant) {
+      attributes = variant.attributes;
+    } else {
+      // Try reading 'attributes' key from map-like rows
+      try {
+        final raw = _read<dynamic>(variant, 'attributes');
+        if (raw is List) attributes = raw.cast<dynamic>();
+      } catch (_) {
+        attributes = null;
+      }
+    }
+
+    if (attributes == null || attributes.isEmpty)
+      return const SizedBox.shrink();
+
+    // Delegate rendering to VariantAttributesDisplay which accepts dynamic lists
+    return VariantAttributesDisplay(attributes: attributes);
+  }
+
+  Widget _borderWrapper({
+    required BuildContext context,
+    required Widget child,
+    required Color borderColor,
+  }) {
+    final c = context.colors;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 2),
+        borderRadius: BorderRadius.circular(8),
+        color: c.surface,
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(8), child: child),
+    );
+  }
+
+  Widget _buildProductImage(BuildContext context, dynamic variant) {
+    String? imagePath;
+
+    // Try to get image path from variant
+    if (variant is ProductVariant) {
+      imagePath = variant.imagePath;
+    } else if (variant is InventoryItemRow) {
+      imagePath = variant.variant.imagePath;
+    } else {
+      // For map-based rows
+      imagePath = _read<String>(variant, 'image_path');
+    }
+
+    // If we have an image path and the file exists, display it
+    if (imagePath != null && imagePath.isNotEmpty) {
+      final file = File(imagePath);
+      // تحقق من المسار ووجود الملف
+      debugPrint(
+        '[ProductGridItem] imagePath: $imagePath, exists: ${file.existsSync()}',
+      );
+      if (file.existsSync()) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: Image.file(file, width: 44, height: 44, fit: BoxFit.cover),
+        );
+      }
+    }
+
+    // Fallback to placeholder
+    return SvgPicture.asset(
+      'assets/svg/product_placeholder.svg',
+      width: 44,
+      height: 44,
+      fit: BoxFit.contain,
+      colorFilter: ColorFilter.mode(
+        context.colors.textSecondary.withValues(alpha: 0.45),
+        BlendMode.srcIn,
       ),
     );
   }
 }
 
-class _VariantBadges extends StatelessWidget {
-  final Map<String, Object?> data;
-  final UIDensity density;
-  const _VariantBadges({required this.data, required this.density});
-  @override
-  Widget build(BuildContext context) {
-    final size = (data['size'] ?? '').toString();
-    final color = (data['color'] ?? '').toString();
-    if (size.isEmpty && color.isEmpty) return const SizedBox.shrink();
-    final c = context.colors;
-    final pads = DensityConfig.tilePadding(density) - 2;
-    List<Widget> chips = [];
-    Widget chip(String text) => Container(
-      padding: EdgeInsets.symmetric(horizontal: pads, vertical: 2),
-      decoration: BoxDecoration(
-        color: c.surface,
-        border: Border.all(color: c.border),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        text,
-        style: AppTypography.micro.copyWith(color: c.textSecondary),
-      ),
-    );
-    if (size.isNotEmpty) chips.add(chip(size));
-    if (color.isNotEmpty) chips.add(chip(color));
-    return Wrap(spacing: 4, children: chips);
-  }
-}
+// Removed unused _VariantBadges
+
+// Removed unused _HalfBorder
+
+// Removed unused _HalfBorderPainter

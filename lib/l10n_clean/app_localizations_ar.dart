@@ -291,7 +291,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get done => 'تم';
 
   @override
-  String get items => 'العناصر';
+  String get items => 'مجموع الكاش';
 
   @override
   String get purchaseInvoiceTitle => 'فاتورة مشتريات';
@@ -454,7 +454,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String stockLowIndicator(Object qty, Object rp, Object sku) {
-    return 'SKU $sku: $qty — RP $rp';
+    return 'SKU $sku: $qty - RP $rp';
   }
 
   @override
@@ -703,4 +703,77 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get testPrinter => 'اختبار الطابعة';
+
+  @override
+  String get manageAttributesTitle => 'إدارة الخصائص';
+
+  @override
+  String get attributeNoun => 'خاصية';
+
+  @override
+  String get noValuesYet => 'لا توجد قيم بعد';
+
+  @override
+  String get valueNoun => 'قيمة';
+
+  @override
+  String get noAttributesLoaded => 'لم يتم تحميل أي خصائص';
+
+  @override
+  String get addNewAttribute => 'إضافة خاصية';
+
+  @override
+  String get attributeNamePlaceholder => 'اسم الخاصية';
+
+  @override
+  String get nameRequired => 'الاسم مطلوب';
+
+  @override
+  String get attributeExists => 'خاصية بهذا الاسم موجودة بالفعل';
+
+  @override
+  String get attributeAdded => 'تمت إضافة الخاصية';
+
+  @override
+  String get editAttribute => 'تعديل الخاصية';
+
+  @override
+  String get attributeSaved => 'تم حفظ الخاصية';
+
+  @override
+  String get addNewValue => 'إضافة قيمة';
+
+  @override
+  String get valuePlaceholder => 'القيمة';
+
+  @override
+  String get valueRequired => 'القيمة مطلوبة';
+
+  @override
+  String get valueAdded => 'تمت إضافة القيمة';
+
+  @override
+  String get editValue => 'تعديل القيمة';
+
+  @override
+  String get valueSaved => 'تم حفظ القيمة';
+
+  @override
+  String get confirmDelete => 'تأكيد الحذف';
+
+  @override
+  String deleteAttributePrompt(Object name) {
+    return 'حذف الخاصية $name?';
+  }
+
+  @override
+  String deleteValuePrompt(Object value) {
+    return 'حذف القيمة $value?';
+  }
+
+  @override
+  String get attributeDeleted => 'تم حذف الخاصية';
+
+  @override
+  String get valueDeleted => 'تم حذف القيمة';
 }

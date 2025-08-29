@@ -84,4 +84,12 @@ class SalesRepository {
   Future<Sale> getSale(int saleId) => dao.getSale(saleId);
   Future<List<Payment>> paymentsForSale(int saleId) =>
       dao.paymentsForSale(saleId);
+
+  Future<List<Map<String, Object?>>> listSales({
+    int limit = 20,
+    int offset = 0,
+    String? searchQuery,
+  }) => dao.listSales(limit: limit, offset: offset, searchQuery: searchQuery);
+  Future<List<Map<String, Object?>>> salesForCustomer(int customerId) =>
+      dao.salesForCustomer(customerId);
 }

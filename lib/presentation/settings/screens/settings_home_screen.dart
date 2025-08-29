@@ -359,7 +359,8 @@ class _SettingsHomeScreenState extends State<SettingsHomeScreen> {
                     onTap: () => Navigator.of(context).push(
                       CupertinoPageRoute(
                         builder: (_) => BlocProvider<AttributesCubit>(
-                          create: (_) => sl<AttributesCubit>()..loadAttributes(),
+                          create: (_) =>
+                              sl<AttributesCubit>()..loadAttributes(),
                           child: const ManageAttributesScreen(),
                         ),
                       ),

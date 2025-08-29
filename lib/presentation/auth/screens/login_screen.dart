@@ -1,3 +1,4 @@
+import 'package:clothes_pos/core/logging/app_logger.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/models/user.dart';
 import 'package:clothes_pos/data/repositories/auth_repository.dart';
@@ -14,6 +15,46 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  Future<void> _onUserTapped(AppUser user) async {
+    final ctx = context; // capture
+    final l = AppLocalizations.of(ctx);
+    final isPlaceholder = await _authRepo.isPasswordPlaceholder(user.username);
+    String? password;
+
+    if (isPlaceholder) {
+      password = await _promptForPassword(user, isFirstTime: true);
+      if (password == null) return;
+
+      final verified = await _authRepo.login(user.username, password);
+      if (verified == null) {
+        if (!mounted || !ctx.mounted) return;
+        _showErrorDialog(ctx, 'خطأ', 'كلمة المرور يجب أن تكون 4 أحرف أو أكثر.');
+        return;
+      }
+      if (!mounted || !ctx.mounted) return;
+      // Use the new success dialog
+      _showSuccessDialog(
+        ctx,
+        'تم تعيين كلمة المرور',
+        'تم تعيين كلمة المرور بنجاح. يمكنك الآن الدخول للنظام.',
+      );
+      ctx.read<AuthCubit>().setUser(verified);
+      return;
+    } else {
+      password = await _promptForPassword(user);
+      if (password == null) return;
+
+      final verified = await _authRepo.login(user.username, password);
+      if (verified == null) {
+        if (!mounted || !ctx.mounted) return;
+        _showErrorDialog(ctx, 'خطأ', l.loginInvalid);
+        return;
+      }
+      if (!mounted || !ctx.mounted) return;
+      ctx.read<AuthCubit>().setUser(verified);
+    }
+  }
+
   final _authRepo = sl<AuthRepository>();
 
   List<AppUser> _users = const [];
@@ -28,7 +69,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _loadUsers() async {
     try {
+      AppLogger.d('LoginScreen._loadUsers called');
       final users = await _authRepo.listActiveUsers();
+      AppLogger.d('LoginScreen._loadUsers got users: ${users.length}');
       if (!mounted) return;
       setState(() {
         _users = users;
@@ -36,6 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _error = null;
       });
     } catch (e) {
+      AppLogger.e('LoginScreen._loadUsers error: $e');
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -44,53 +88,69 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  Future<void> _onUserTapped(AppUser user) async {
-    final ctx = context; // capture
-    final l = AppLocalizations.of(ctx);
-    final password = await _promptForPassword(user);
-    if (password == null) return;
-
-    // Verify credentials without changing the route yet
-    final verified = await _authRepo.login(user.username, password);
-    if (verified == null) {
-      if (!mounted || !ctx.mounted) return;
-      _showErrorDialog(ctx, 'خطأ', l.loginInvalid);
-      return;
-    }
-
-    if (!mounted || !ctx.mounted) return;
-    ctx.read<AuthCubit>().setUser(verified);
-  }
-
-  Future<String?> _promptForPassword(AppUser user) async {
+  Future<String?> _promptForPassword(
+    AppUser user, {
+    bool isFirstTime = false,
+  }) async {
     final ctrl = TextEditingController();
     return showCupertinoDialog<String>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
-        title: Text(AppLocalizations.of(context).loginEnterPassword),
-        content: Column(
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              user.fullName?.isNotEmpty == true
-                  ? user.fullName!
-                  : user.username,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: CupertinoColors.activeBlue,
-              ),
+        title: Text(
+          isFirstTime
+              ? 'تعيين كلمة مرور المسؤول لأول مرة'
+              : AppLocalizations.of(context).loginEnterPassword,
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  user.fullName?.isNotEmpty == true
+                      ? user.fullName!
+                      : user.username,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w600,
+                    color: CupertinoColors.activeBlue,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                if (isFirstTime) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'أدخل كلمة مرور جديدة للمسؤول. سيتم حفظها في قاعدة البيانات ولن تظهر مرة أخرى.',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: CupertinoColors.systemGrey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+                const SizedBox(height: 16),
+                CupertinoTextField(
+                  controller: ctrl,
+                  placeholder: isFirstTime
+                      ? 'كلمة مرور جديدة للمسؤول'
+                      : AppLocalizations.of(context).loginEnterPassword,
+                  obscureText: true,
+                  autofocus: true,
+                  obscuringCharacter: '•',
+                  style: const TextStyle(fontSize: 18),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 14,
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
             ),
-            const SizedBox(height: 8),
-            CupertinoTextField(
-              controller: ctrl,
-              placeholder: AppLocalizations.of(context).loginEnterPassword,
-              obscureText: true,
-              autofocus: true,
-              obscuringCharacter: '•',
-              style: const TextStyle(fontSize: 16),
-            ),
-          ],
+          ),
         ),
         actions: [
           CupertinoDialogAction(
@@ -100,7 +160,29 @@ class _LoginScreenState extends State<LoginScreen> {
           CupertinoDialogAction(
             isDefaultAction: true,
             onPressed: () => Navigator.of(ctx).pop(ctrl.text.trim()),
-            child: Text(AppLocalizations.of(context).loginContinue),
+            child: Text(
+              isFirstTime
+                  ? 'حفظ كلمة المرور'
+                  : AppLocalizations.of(context).loginContinue,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // New dialog for success messages
+  void _showSuccessDialog(BuildContext context, String title, String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(message, style: const TextStyle(fontSize: 16)),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('موافق'),
           ),
         ],
       ),
@@ -110,14 +192,55 @@ class _LoginScreenState extends State<LoginScreen> {
   void _showErrorDialog(BuildContext context, String title, String message) {
     showCupertinoDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
-        title: Text(title),
-        content: Text(message),
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message,
+                      style: const TextStyle(
+                        color: CupertinoColors.systemRed,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Specific hints for common errors
+                    if (message.contains('كلمة المرور'))
+                      const Text(
+                        'يرجى إدخال كلمة مرور مكونة من 4 أحرف أو أكثر.',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    if (message.contains('المستخدمين'))
+                      const Text(
+                        'تعذر تحميل قائمة المستخدمين. تحقق من الاتصال أو أعد المحاولة.',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    if (message.contains('بيانات الدخول'))
+                      const Text(
+                        'يرجى التأكد من صحة اسم المستخدم وكلمة المرور.',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           CupertinoDialogAction(
-            isDefaultAction: true,
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('حسنًا'),
+            child: const Text('موافق'),
+            onPressed: () => Navigator.of(ctx).pop(),
           ),
         ],
       ),
@@ -140,6 +263,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
+                        const SizedBox(height: 16),
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: Image.asset(
+                              'assets/images/475686060_122111624468716899_7070205537672805384_n.jpg',
+                              width: 120,
+                              height: 120,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(
+                                    CupertinoIcons.exclamationmark_circle,
+                                    size: 120,
+                                    color: CupertinoColors.systemRed,
+                                  ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         if (_error != null)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 8.0),
@@ -183,24 +325,26 @@ class _LoginScreenState extends State<LoginScreen> {
                                             u.fullName?.isNotEmpty == true
                                             ? u.fullName!
                                             : u.username;
-                                        return AspectRatio(
-                                          aspectRatio: 1,
+                                        return Container(
+                                          margin: EdgeInsets.zero,
                                           child: CupertinoButton(
                                             padding: EdgeInsets.zero,
                                             onPressed: state.loading
                                                 ? null
                                                 : () => _onUserTapped(u),
                                             child: Container(
+                                              width: targetSize,
+                                              height: targetSize,
                                               decoration: BoxDecoration(
                                                 color: CupertinoColors
                                                     .activeBlue
-                                                    .withOpacity(0.08),
+                                                    .withValues(alpha: 0.08),
                                                 borderRadius:
                                                     BorderRadius.circular(16),
                                                 border: Border.all(
                                                   color: CupertinoColors
                                                       .activeBlue
-                                                      .withOpacity(0.25),
+                                                      .withValues(alpha: 0.25),
                                                 ),
                                               ),
                                               child: Column(
@@ -213,7 +357,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                                     decoration: BoxDecoration(
                                                       color: CupertinoColors
                                                           .activeBlue
-                                                          .withOpacity(0.18),
+                                                          .withValues(
+                                                            alpha: 0.18,
+                                                          ),
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: const Icon(
@@ -239,9 +385,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                                             FontWeight.w600,
                                                         fontSize: 13,
                                                       ),
-                                                      maxLines: 2,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
                                                     ),
                                                   ),
                                                 ],

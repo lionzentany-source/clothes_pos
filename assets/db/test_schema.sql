@@ -33,21 +33,22 @@ CREATE TABLE IF NOT EXISTS parent_products (
 );
 
 CREATE TABLE IF NOT EXISTS product_variants (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	parent_product_id INTEGER NOT NULL,
-	size TEXT,
-	color TEXT,
-	sku TEXT,
-	barcode TEXT,
-	rfid_tag TEXT,
-	cost_price REAL NOT NULL DEFAULT 0,
-	sale_price REAL NOT NULL DEFAULT 0,
-	reorder_point INTEGER NOT NULL DEFAULT 0,
-	quantity INTEGER NOT NULL DEFAULT 0,
-	created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-	updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-	FOREIGN KEY (parent_product_id) REFERENCES parent_products(id) ON DELETE CASCADE,
-	UNIQUE(barcode)
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  parent_product_id INTEGER NOT NULL,
+  size TEXT,
+  color TEXT,
+  sku TEXT,
+  barcode TEXT,
+  rfid_tag TEXT,
+  cost_price REAL NOT NULL DEFAULT 0,
+  sale_price REAL NOT NULL DEFAULT 0,
+  reorder_point INTEGER NOT NULL DEFAULT 0,
+  quantity INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  image_path TEXT,
+  FOREIGN KEY (parent_product_id) REFERENCES parent_products(id) ON DELETE CASCADE,
+  UNIQUE(barcode)
 );
 
 CREATE TABLE IF NOT EXISTS product_variant_rfids (

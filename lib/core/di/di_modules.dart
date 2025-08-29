@@ -27,17 +27,25 @@ import 'package:clothes_pos/data/datasources/brand_dao.dart';
 import 'package:clothes_pos/data/repositories/brand_repository.dart';
 import 'package:clothes_pos/data/datasources/users_dao.dart';
 import 'package:clothes_pos/data/repositories/users_repository.dart';
+import 'package:clothes_pos/data/repositories/customer_repository.dart';
+import 'package:clothes_pos/data/datasources/customer_dao.dart';
+import 'package:clothes_pos/data/datasources/attribute_dao.dart';
+import 'package:clothes_pos/data/repositories/attribute_repository.dart';
 import 'package:clothes_pos/data/datasources/expense_dao.dart';
 import 'package:clothes_pos/data/repositories/expense_repository.dart';
 import 'package:clothes_pos/data/datasources/audit_dao.dart';
 import 'package:clothes_pos/data/repositories/audit_repository.dart';
 import 'package:clothes_pos/data/repositories/aggregated_reports_repository.dart';
 import 'package:clothes_pos/core/db/database_helper.dart';
+import 'package:clothes_pos/presentation/attributes/bloc/attributes_cubit.dart';
 
-void registerDataModules() {
+void registerDataModules({bool registerAggregatedReports = true}) {
   // Product DAO & Repository
-  sl.registerLazySingleton<ProductDao>(() => ProductDao(sl()));
-  sl.registerLazySingleton<ProductRepository>(() => ProductRepository(sl()));
+  // Product DAO & Repository
+  sl.registerLazySingleton<ProductDao>(() => ProductDao(sl(), sl()));
+  sl.registerLazySingleton<ProductRepository>(
+    () => ProductRepository(sl(), sl<AttributeRepository>()),
+  );
 
   // Purchase DAO & Repository
   sl.registerLazySingleton<PurchaseDao>(() => PurchaseDao(sl()));
@@ -83,6 +91,10 @@ void registerDataModules() {
   sl.registerLazySingleton<UsersDao>(() => UsersDao(sl()));
   sl.registerLazySingleton<UsersRepository>(() => UsersRepository(sl()));
 
+  // Customer DAO & Repository
+  sl.registerLazySingleton<CustomerDao>(() => CustomerDao(sl()));
+  sl.registerLazySingleton<CustomerRepository>(() => CustomerRepository(sl()));
+
   // Expenses DAO & Repository
   sl.registerLazySingleton<ExpenseDao>(() => ExpenseDao(sl()));
   sl.registerLazySingleton<ExpenseRepository>(() => ExpenseRepository(sl()));
@@ -91,11 +103,25 @@ void registerDataModules() {
   sl.registerLazySingleton<AuditDao>(() => AuditDao(sl()));
   sl.registerLazySingleton<AuditRepository>(() => AuditRepository(sl()));
 
+  // Attribute DAO & Repository
+  sl.registerLazySingleton<AttributeDao>(() => AttributeDao(sl()));
+  sl.registerLazySingleton<AttributeRepository>(
+    () => AttributeRepository(sl()),
+  );
+
+  // Attributes Cubit
+  sl.registerFactory<AttributesCubit>(() => AttributesCubit(sl()));
+
   // Aggregated analytical reports (uses raw Database)
-  sl.registerLazySingletonAsync<AggregatedReportsRepository>(() async {
-    final db = await sl<DatabaseHelper>().database;
-    return AggregatedReportsRepository(db);
-  });
+  // This is optional because it opens the database immediately. Tests that
+  // reset or re-create the DB should call setupLocator(registerAggregatedReports: false)
+  // to avoid races with sqflite/ffi closing the DB.
+  if (registerAggregatedReports) {
+    sl.registerLazySingletonAsync<AggregatedReportsRepository>(() async {
+      final db = await sl<DatabaseHelper>().database;
+      return AggregatedReportsRepository(db);
+    });
+  }
 
   // UHF Reader (Windows)
   if (Platform.isWindows) {

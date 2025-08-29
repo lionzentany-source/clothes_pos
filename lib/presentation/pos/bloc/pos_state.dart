@@ -50,6 +50,7 @@ class PosState extends Equatable {
   final bool checkingOut;
   final List<dynamic> categories; // categories for quick browse
   final int? selectedCategoryId;
+  final String? errorMessage;
   const PosState({
     this.searching = false,
     this.query = '',
@@ -59,6 +60,7 @@ class PosState extends Equatable {
     this.selectedCategoryId,
     this.cart = const [],
     this.checkingOut = false,
+    this.errorMessage,
   });
 
   PosState copyWith({
@@ -70,6 +72,7 @@ class PosState extends Equatable {
     int? selectedCategoryId,
     List<CartLine>? cart,
     bool? checkingOut,
+    String? errorMessage,
   }) => PosState(
     searching: searching ?? this.searching,
     query: query ?? this.query,
@@ -79,6 +82,7 @@ class PosState extends Equatable {
     selectedCategoryId: selectedCategoryId ?? this.selectedCategoryId,
     cart: cart ?? this.cart,
     checkingOut: checkingOut ?? this.checkingOut,
+    errorMessage: errorMessage,
   );
 
   @override
@@ -91,5 +95,6 @@ class PosState extends Equatable {
     selectedCategoryId,
     cart,
     checkingOut,
+    errorMessage,
   ];
 }

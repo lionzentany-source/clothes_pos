@@ -1,13 +1,12 @@
 import 'package:clothes_pos/core/di/locator.dart';
-import 'package:clothes_pos/data/repositories/settings_repository.dart';
 import 'package:clothes_pos/data/models/purchase_invoice.dart';
 import 'package:clothes_pos/data/models/purchase_invoice_item.dart';
 import 'package:clothes_pos/data/repositories/purchase_repository.dart';
 import 'package:clothes_pos/data/models/product_variant.dart';
+import 'package:clothes_pos/data/repositories/product_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/presentation/common/widgets/app_labeled_field.dart';
 import 'package:clothes_pos/l10n_clean/app_localizations.dart';
-import 'package:clothes_pos/presentation/common/widgets/rfid_scan_dialog.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
@@ -16,9 +15,10 @@ import 'package:clothes_pos/presentation/common/view_only_banner.dart';
 import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
 
 import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
 
-import 'variant_search_page.dart';
 import 'supplier_search_page.dart';
+import 'parent_search_page.dart';
 
 class PurchaseEditorScreen extends StatefulWidget {
   const PurchaseEditorScreen({super.key});
@@ -29,6 +29,7 @@ class PurchaseEditorScreen extends StatefulWidget {
 
 class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
   final _supplierIdCtrl = TextEditingController();
+  int? _supplierId;
   final _referenceCtrl = TextEditingController();
   final _items = <_ItemEditModel>[_ItemEditModel.empty()];
   bool _saving = false;
@@ -37,16 +38,36 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
 
   Future<void> _pickVariant(int index) async {
     final selected = await Navigator.of(context).push<ProductVariant>(
-      CupertinoPageRoute(builder: (_) => const VariantSearchPage()),
+      CupertinoPageRoute(builder: (_) => const ParentSearchPage()),
     );
     if (selected != null && mounted) {
       setState(() {
         final model = _items[index];
         model.selectedVariant = selected;
-        model.variantId.text = selected.id?.toString() ?? '';
+        // Fetch parent name and display it with the variant details
+        try {
+          final parent = sl<ProductRepository>().getParentById(
+            selected.parentProductId,
+          );
+          parent.then((p) {
+            if (!mounted) return;
+            setState(() {
+              final parentName = p?.name ?? '';
+              final details = getFullVariantName(selected);
+              model.variantId.text = parentName.isNotEmpty
+                  ? '$parentName${details.isNotEmpty ? ' • $details' : ''}'
+                  : (details.isNotEmpty ? details : 'Variant');
+            });
+          });
+        } catch (_) {
+          model.variantId.text = getFullVariantName(selected);
+        }
         if (model.cost.text.trim() == '0') {
           model.cost.text = (selected.costPrice).toString();
           model.baseCost = selected.costPrice;
+        }
+        if (model.salePrice.text.trim() == '0') {
+          model.salePrice.text = (selected.salePrice).toString();
         }
         model.baseCost ??= double.tryParse(model.cost.text.trim());
       });
@@ -69,49 +90,68 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
   void _removeItem(int i) => setState(() => _items.removeAt(i));
 
   Future<void> _save() async {
-    final supplierId = int.tryParse(_supplierIdCtrl.text.trim());
+    final supplierId = _supplierId ?? int.tryParse(_supplierIdCtrl.text.trim());
     if (supplierId == null) {
       _showError(AppLocalizations.of(context).supplierIdRequired);
       return;
     }
     final items = <PurchaseInvoiceItem>[];
+    final salePriceUpdates = <Map<String, dynamic>>[];
     if (_items.isEmpty) {
       _showError(AppLocalizations.of(context).addAtLeastOne);
       return;
     }
     for (final m in _items) {
-      final variantId = int.tryParse(m.variantId.text.trim());
-      final qty = int.tryParse(m.quantity.text.trim());
-      final cost = double.tryParse(m.cost.text.trim());
-      if (variantId == null) {
-        _showError(AppLocalizations.of(context).pickVariant);
-        return;
-      }
-      if (qty == null || qty <= 0) {
-        _showError(AppLocalizations.of(context).qtyMustBePositive);
-        return;
-      }
-      if (cost == null || cost < 0) {
-        _showError(AppLocalizations.of(context).costMustBePositive);
-        return;
-      }
-      // Validate RFID count not exceeding quantity (optional warning)
-      if (m.rfids.length > qty) {
-        _showError(
-          AppLocalizations.of(
-            context,
-          ).rfidExceedsQty(m.rfids.length.toString(), qty.toString()),
+      try {
+        // Prefer selectedVariant.id (keeps UI free of numeric IDs)
+        final variantId =
+            m.selectedVariant?.id ?? int.tryParse(m.variantId.text.trim());
+        final qty = int.tryParse(m.quantity.text.trim());
+        final cost = double.tryParse(m.cost.text.trim());
+        final salePrice = double.tryParse(m.salePrice.text.trim());
+        if (variantId == null) {
+          _showError(AppLocalizations.of(context).pickVariant);
+          return;
+        }
+        if (qty == null || qty <= 0) {
+          _showError(AppLocalizations.of(context).qtyMustBePositive);
+          return;
+        }
+        if (cost == null || cost < 0) {
+          _showError(AppLocalizations.of(context).costMustBePositive);
+          return;
+        }
+        if (salePrice == null || salePrice < 0) {
+          _showError(AppLocalizations.of(context).enterValidNumber);
+          return;
+        }
+        // Validate RFID count not exceeding quantity (optional warning)
+        try {
+          if (m.rfids.length > qty) {
+            _showError(
+              AppLocalizations.of(
+                context,
+              ).rfidExceedsQty(m.rfids.length.toString(), qty.toString()),
+            );
+            return;
+          }
+        } catch (e) {
+          _showError('خطأ أثناء التحقق من RFID: ${e.toString()}');
+          return;
+        }
+        items.add(
+          PurchaseInvoiceItem(
+            purchaseInvoiceId: 0,
+            variantId: variantId,
+            quantity: qty,
+            costPrice: cost,
+          ),
         );
+        salePriceUpdates.add({'id': variantId, 'salePrice': salePrice});
+      } catch (e) {
+        _showError('خطأ في معالجة بيانات الجهاز: ${e.toString()}');
         return;
       }
-      items.add(
-        PurchaseInvoiceItem(
-          purchaseInvoiceId: 0,
-          variantId: variantId,
-          quantity: qty,
-          costPrice: cost,
-        ),
-      );
     }
 
     setState(() => _saving = true);
@@ -127,6 +167,16 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
           .map((e) => List<String>.from(e.rfids))
           .toList();
       await _repo.createInvoiceWithRfids(invoice, items, rfidsByItem);
+
+      // Update sale prices for affected variants
+      final prodRepo = sl<ProductRepository>();
+      for (final u in salePriceUpdates) {
+        await prodRepo.updateVariantSalePrice(
+          variantId: u['id'] as int,
+          salePrice: u['salePrice'] as double,
+        );
+      }
+
       if (!mounted) return;
       Navigator.of(context).pop(true);
     } catch (e) {
@@ -182,73 +232,68 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
                 margin: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               ),
             // Supplier field (RTL aligned)
-            AppLabeledField(
-              label: AppLocalizations.of(context).supplier,
-              controller: _supplierIdCtrl,
-              readOnly: true,
-              placeholder: AppLocalizations.of(context).supplier,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppInlineIconButton(
-                    icon: CupertinoIcons.search,
-                    onTap: !canPurchase
-                        ? () {}
-                        : () async {
-                            final selected = await Navigator.of(context).push(
-                              CupertinoPageRoute(
-                                builder: (_) => const SupplierSearchPage(),
-                              ),
-                            );
-                            if (selected != null) {
-                              setState(() {
-                                _supplierIdCtrl.text =
-                                    (selected.id?.toString() ?? '');
-                                _supplierName = selected.name;
-                              });
-                            }
-                          },
-                  ),
-                  if (_supplierName != null)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: Text(
-                        'المورد: $_supplierName',
-                        textDirection: TextDirection.rtl,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: CupertinoColors.secondaryLabel,
+            SizedBox(
+              width: 180,
+              child: AppLabeledField(
+                label: AppLocalizations.of(context).supplier,
+                controller: _supplierIdCtrl,
+                readOnly: true,
+                placeholder: AppLocalizations.of(context).supplier,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AppInlineIconButton(
+                      icon: CupertinoIcons.search,
+                      onTap: !canPurchase
+                          ? () {}
+                          : () async {
+                              final selected = await Navigator.of(context).push(
+                                CupertinoPageRoute(
+                                  builder: (_) => const SupplierSearchPage(),
+                                ),
+                              );
+                              if (selected != null) {
+                                setState(() {
+                                  // Keep the numeric id internally, but show only the name
+                                  _supplierId = selected.id;
+                                  _supplierIdCtrl.text = selected.name;
+                                  _supplierName = selected.name;
+                                });
+                              }
+                            },
+                    ),
+                    if (_supplierName != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        child: Text(
+                          'المورد: $_supplierName',
+                          textDirection: TextDirection.rtl,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: CupertinoColors.secondaryLabel,
+                          ),
                         ),
                       ),
-                    ),
-                  if (_supplierIdCtrl.text.trim().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 6),
-                      child: AppInlineIconButton(
-                        icon: CupertinoIcons.xmark_circle_fill,
-                        color: CupertinoColors.systemRed,
-                        onTap: !canPurchase
-                            ? () {}
-                            : () => setState(() {
-                                _supplierIdCtrl.text = '';
-                                _supplierName = null;
-                              }),
+                    if (_supplierIdCtrl.text.trim().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 6),
+                        child: AppInlineIconButton(
+                          icon: CupertinoIcons.xmark_circle_fill,
+                          color: CupertinoColors.systemRed,
+                          onTap: !canPurchase
+                              ? () {}
+                              : () => setState(() {
+                                  _supplierIdCtrl.text = '';
+                                  _supplierName = null;
+                                  _supplierId = null;
+                                }),
+                        ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
-            // Reference field
-            AppLabeledField(
-              label: AppLocalizations.of(context).referenceOptional,
-              controller: _referenceCtrl,
-              trailing: const Icon(
-                CupertinoIcons.tag,
-                size: 16,
-                color: CupertinoColors.inactiveGray,
-              ),
-            ),
-            // Received date row
+            // Received date row (moved up)
             Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(16, 4, 16, 0),
               child: Row(
@@ -331,6 +376,19 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
                 ],
               ),
             ),
+            // Reference field (moved below date)
+            SizedBox(
+              width: 180,
+              child: AppLabeledField(
+                label: AppLocalizations.of(context).referenceOptional,
+                controller: _referenceCtrl,
+                trailing: const Icon(
+                  CupertinoIcons.tag,
+                  size: 16,
+                  color: CupertinoColors.inactiveGray,
+                ),
+              ),
+            ),
             // Items section title
             Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 16, 4),
@@ -370,366 +428,157 @@ class _ItemEditModel {
   final TextEditingController cost;
   final List<String> rfids;
   ProductVariant? selectedVariant;
-  double? baseCost; // original cost snapshot for quick reset
+  double? baseCost;
+  final TextEditingController salePrice;
   _ItemEditModel({
     required this.variantId,
     required this.quantity,
     required this.cost,
+    required this.salePrice,
     List<String>? rfids,
   }) : rfids = rfids ?? [];
   factory _ItemEditModel.empty() => _ItemEditModel(
     variantId: TextEditingController(),
     quantity: TextEditingController(text: '0'),
     cost: TextEditingController(text: '0'),
+    salePrice: TextEditingController(text: '0'),
   );
   void dispose() {
     variantId.dispose();
     quantity.dispose();
     cost.dispose();
+    salePrice.dispose();
     rfids.clear();
   }
 }
 
-class _ItemEditor extends StatefulWidget {
+class _ItemEditor extends StatelessWidget {
   final _ItemEditModel model;
   final VoidCallback? onRemove;
   final VoidCallback? onPickVariant;
   final bool canEdit;
+
   const _ItemEditor({
     required this.model,
-    required this.onRemove,
-    required this.onPickVariant,
-    required this.canEdit,
+    this.onRemove,
+    this.onPickVariant,
+    this.canEdit = true,
   });
 
   @override
-  State<_ItemEditor> createState() => _ItemEditorState();
-}
-
-class _ItemEditorState extends State<_ItemEditor> {
-  Widget _scanRfidButton(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return CupertinoButton(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      child: Text(l.scanRfid),
-      onPressed: () async {
-        try {
-          // Capture localization early to avoid context after awaits
-          final settings = sl<SettingsRepository>();
-          final enabled = await settings.get('rfid_enabled');
-          if (!mounted) return; // ensure widget still in tree
-          final enabledBool =
-              enabled == '1' || (enabled?.toLowerCase() == 'true');
-          if (!enabledBool) {
-            if (!mounted) return;
-            if (!context.mounted) return;
-            await showCupertinoDialog(
-              context: context,
-              builder: (dialogCtx) => CupertinoAlertDialog(
-                title: Text(l.notEnabled),
-                content: Text(l.enableRfidFirst),
-                actions: [
-                  CupertinoDialogAction(
-                    isDefaultAction: true,
-                    child: Text(l.ok),
-                    onPressed: () => Navigator.of(dialogCtx).pop(),
-                  ),
-                ],
-              ),
-            );
-            if (!mounted) return;
-            return;
-          }
-          // Use already captured localization
-          if (!context.mounted) return;
-          final seen = await showRfidScanDialog(context) ?? <String>[];
-          if (!mounted || !context.mounted) return;
-          final qty = int.tryParse(widget.model.quantity.text.trim()) ?? 0;
-          int added = 0;
-          int ignored = 0;
-          for (final epc in seen) {
-            if (qty > 0 && widget.model.rfids.length >= qty) {
-              ignored++;
-              continue;
-            }
-            if (!widget.model.rfids.contains(epc)) {
-              widget.model.rfids.add(epc);
-              added++;
-            }
-          }
-          if (added > 0) setState(() {});
-          if (ignored > 0 && mounted) {
-            if (!context.mounted) return;
-            await showCupertinoDialog(
-              context: context,
-              builder: (dialogCtx) => CupertinoAlertDialog(
-                title: Text(l.warning),
-                content: Text(
-                  l.addedIgnored(added.toString(), ignored.toString()),
-                ),
-                actions: [
-                  CupertinoDialogAction(
-                    isDefaultAction: true,
-                    onPressed: () => Navigator.of(dialogCtx).pop(),
-                    child: Text(l.ok),
-                  ),
-                ],
-              ),
-            );
-          }
-        } catch (e) {
-          if (!mounted) return;
-          if (!context.mounted) return;
-          await showCupertinoDialog(
-            context: context,
-            builder: (dialogCtx) => CupertinoAlertDialog(
-              title: Text(l.scanError),
-              content: Text(e.toString()),
-              actions: [
-                CupertinoDialogAction(
-                  isDefaultAction: true,
-                  onPressed: () => Navigator.of(dialogCtx).pop(),
-                  child: Text(l.ok),
-                ),
-              ],
-            ),
-          );
-        }
-      },
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final loc = AppLocalizations.of(context);
-    final selected = widget.model.selectedVariant;
-    final variantLabel = selected == null
-        ? loc.selectVariant
-        : '${selected.sku ?? ''} — ${selected.size ?? ''} ${selected.color ?? ''}'
-              .trim();
-
+    final l = AppLocalizations.of(context);
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemGroupedBackground,
-        borderRadius: BorderRadius.circular(12),
+        color: CupertinoColors.systemGrey6,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: CupertinoColors.systemGrey4, width: 1),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(loc.item, textDirection: TextDirection.rtl),
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: widget.canEdit ? widget.onRemove : null,
-                child: Text(loc.delete),
-              ),
-            ],
-          ),
-          Row(
             children: [
               Expanded(
-                child: CupertinoButton(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  onPressed: widget.canEdit ? widget.onPickVariant : null,
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: Text(variantLabel, textDirection: TextDirection.rtl),
-                  ),
-                ),
-              ),
-              Expanded(
-                child: AppLabeledField(
-                  label: loc.quantity,
-                  controller: widget.model.quantity,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: AppLabeledField(
-                  label: loc.cost,
-                  controller: widget.model.cost,
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              const Spacer(),
-            ],
-          ),
-          const SizedBox(height: 6),
-          // Quick actions: -10%, -5%, Reset, +5%, +10%, VAT 15%
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final entry in [
-                {'label': '-10%', 'factor': 0.90},
-                {'label': '-5%', 'factor': 0.95},
-                {'label': 'إعادة', 'factor': null},
-                {'label': '+5%', 'factor': 1.05},
-                {'label': '+10%', 'factor': 1.10},
-                {'label': 'VAT 15%', 'factor': 1.15},
-              ])
-                CupertinoButton(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  onPressed: widget.canEdit
-                      ? () {
-                          final base =
-                              widget.model.baseCost ??
-                              double.tryParse(widget.model.cost.text.trim()) ??
-                              0;
-                          if (entry['factor'] == null) {
-                            // Reset
-                            widget.model.cost.text = base.toStringAsFixed(2);
-                          } else {
-                            final f = entry['factor'] as double;
-                            final v = (base * f);
-                            widget.model.cost.text = v.toStringAsFixed(2);
-                          }
-                          setState(() {
-                            widget.model.baseCost =
-                                base; // ensure baseline saved
-                          });
-                        }
-                      : null,
-                  child: Text(entry['label'] as String),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          // RFID tags list and adder
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              loc.rfidCardsOptional,
-              textDirection: TextDirection.rtl,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: [
-              for (final epc in widget.model.rfids)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 6,
-                  ),
+                child: Container(
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: CupertinoColors.systemGrey5,
-                    borderRadius: BorderRadius.circular(8),
+                    color: CupertinoColors.systemBlue.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(epc, textDirection: TextDirection.ltr),
-                      const SizedBox(width: 6),
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => widget.model.rfids.remove(epc)),
-                        child: const Icon(
-                          CupertinoIcons.xmark_circle_fill,
-                          size: 18,
-                          color: CupertinoColors.systemRed,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppLabeledField(
+                              label: l.selectVariant,
+                              controller: model.variantId,
+                              readOnly: true,
+                              placeholder: l.selectVariant,
+                              trailing: CupertinoButton(
+                                padding: EdgeInsets.zero,
+                                onPressed: canEdit ? onPickVariant : null,
+                                child: Icon(
+                                  CupertinoIcons.search,
+                                  color: CupertinoColors.activeBlue,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          SizedBox(
+                            width: 110,
+                            child: AppLabeledField(
+                              label: l.quantity,
+                              controller: model.quantity,
+                              placeholder: l.quantity,
+                              readOnly: !canEdit,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (model.selectedVariant != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4, right: 2),
+                          child: Text(
+                            getFullVariantName(model.selectedVariant!),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: CupertinoColors.label,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textDirection: TextDirection.rtl,
+                          ),
                         ),
+                      if (model.selectedVariant != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, right: 2),
+                          child: VariantAttributesDisplay(
+                            attributes: model.selectedVariant!.attributes,
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AppLabeledField(
+                              label: l.cost,
+                              controller: model.cost,
+                              placeholder: l.cost,
+                              readOnly: !canEdit,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: AppLabeledField(
+                              label: l.priceLabel,
+                              controller: model.salePrice,
+                              placeholder: l.priceLabel,
+                              readOnly: !canEdit,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              if (widget.canEdit) _scanRfidButton(context),
-              CupertinoButton(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 6,
-                ),
-                onPressed: !widget.canEdit
-                    ? null
-                    : () async {
-                        final epc = await showCupertinoDialog<String>(
-                          context: context,
-                          builder: (ctx) {
-                            final ctrl = TextEditingController();
-                            return CupertinoAlertDialog(
-                              title: Text(
-                                AppLocalizations.of(ctx).addRfidTitle,
-                              ),
-                              content: Column(
-                                children: [
-                                  const SizedBox(height: 8),
-                                  CupertinoTextField(
-                                    controller: ctrl,
-                                    placeholder: AppLocalizations.of(
-                                      ctx,
-                                    ).epcPlaceholder,
-                                    textDirection: TextDirection.ltr,
-                                  ),
-                                ],
-                              ),
-                              actions: [
-                                CupertinoDialogAction(
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                  child: Text(AppLocalizations.of(ctx).cancel),
-                                ),
-                                CupertinoDialogAction(
-                                  isDefaultAction: true,
-                                  onPressed: () =>
-                                      Navigator.of(ctx).pop(ctrl.text.trim()),
-                                  child: Text(
-                                    AppLocalizations.of(ctx).addAction,
-                                  ),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                        if (epc != null && epc.isNotEmpty) {
-                          final qty =
-                              int.tryParse(widget.model.quantity.text.trim()) ??
-                              0;
-                          if (qty > 0 && widget.model.rfids.length >= qty) {
-                            if (!context.mounted) return;
-                            await showCupertinoDialog(
-                              context: context,
-                              builder: (dialogCtx) => CupertinoAlertDialog(
-                                title: Text(
-                                  AppLocalizations.of(dialogCtx).warning,
-                                ),
-                                content: Text(
-                                  AppLocalizations.of(
-                                    dialogCtx,
-                                  ).rfiCardsLimitReached,
-                                ),
-                                actions: [
-                                  CupertinoDialogAction(
-                                    isDefaultAction: true,
-                                    onPressed: () =>
-                                        Navigator.of(dialogCtx).pop(),
-                                    child: Text(
-                                      AppLocalizations.of(dialogCtx).ok,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                            return;
-                          }
-                          if (!widget.model.rfids.contains(epc)) {
-                            setState(() => widget.model.rfids.add(epc));
-                          }
-                        }
-                      },
-                child: Text(AppLocalizations.of(context).addRfidCard),
               ),
+              if (onRemove != null)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 8),
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: canEdit ? onRemove : null,
+                    child: Icon(
+                      CupertinoIcons.delete,
+                      color: CupertinoColors.destructiveRed,
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
@@ -738,73 +587,13 @@ class _ItemEditorState extends State<_ItemEditor> {
   }
 }
 
-class _RfidScanDialog extends StatefulWidget {
-  final VoidCallback onStop;
-  final List<String> seen;
-  final List<Object> errors;
-  const _RfidScanDialog({
-    required this.onStop,
-    required this.seen,
-    required this.errors,
-  });
-  @override
-  State<_RfidScanDialog> createState() => _RfidScanDialogState();
-}
-
-class _RfidScanDialogState extends State<_RfidScanDialog> {
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context);
-    return CupertinoAlertDialog(
-      title: Text(l.scanning),
-      content: SizedBox(
-        height: 140,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(l.pressStop),
-            const SizedBox(height: 8),
-            Expanded(
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  color: CupertinoColors.systemGrey5,
-                  borderRadius: BorderRadius.all(Radius.circular(8)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: ListView.builder(
-                      itemCount: widget.seen.length,
-                      itemBuilder: (c, i) => Text(
-                        widget.seen[i],
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            if (widget.errors.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                widget.errors.first.toString(),
-                style: const TextStyle(
-                  color: CupertinoColors.systemRed,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        CupertinoDialogAction(
-          isDefaultAction: true,
-          onPressed: widget.onStop,
-          child: Text(l.stop),
-        ),
-      ],
-    );
-  }
+String getFullVariantName(ProductVariant variant) {
+  final sku = variant.sku ?? '';
+  final size = variant.size ?? '';
+  final color = variant.color ?? '';
+  List<String> parts = [];
+  if (sku.isNotEmpty) parts.add('[$sku]');
+  if (color.isNotEmpty) parts.add(color);
+  if (size.isNotEmpty) parts.add(size);
+  return parts.join(' ');
 }

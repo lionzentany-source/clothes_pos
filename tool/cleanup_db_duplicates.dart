@@ -2,9 +2,13 @@ import 'dart:io';
 
 void main() {
   final repoRoot = Directory.current;
-  final dotTool = Directory('${repoRoot.path}${Platform.pathSeparator}.dart_tool${Platform.pathSeparator}sqflite_common_ffi${Platform.pathSeparator}databases');
+  final dotTool = Directory(
+    '${repoRoot.path}${Platform.pathSeparator}.dart_tool${Platform.pathSeparator}sqflite_common_ffi${Platform.pathSeparator}databases',
+  );
   if (!dotTool.existsSync()) {
-    print('No .dart_tool/sqflite_common_ffi/databases folder found — nothing to clean.');
+    print(
+      'No .dart_tool/sqflite_common_ffi/databases folder found — nothing to clean.',
+    );
     return;
   }
 

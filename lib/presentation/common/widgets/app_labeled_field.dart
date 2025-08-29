@@ -95,14 +95,14 @@ class AppInlineIconButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(12),
+        constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
         decoration: BoxDecoration(
-          // 0.12 visual alpha; use withValues to avoid precision loss (withOpacity deprecated)
           color: color.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: color, width: 0.6),
         ),
-        child: Icon(icon, size: 14, color: color),
+        child: Icon(icon, size: 20, color: color),
       ),
     );
   }

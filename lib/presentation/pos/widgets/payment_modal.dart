@@ -1,10 +1,13 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
 import 'package:clothes_pos/presentation/design/system/app_theme.dart';
 import 'package:clothes_pos/presentation/design/system/app_colors.dart';
-import 'package:clothes_pos/presentation/design/system/motion.dart';
 import 'package:clothes_pos/presentation/design/system/app_input_field.dart';
+import 'numeric_keypad.dart';
+
+PaymentPart? _focusedPart;
 
 enum PaymentMethodKind { cash, card, mobile }
 
@@ -26,11 +29,28 @@ class PaymentModal extends StatefulWidget {
     required double total,
     required void Function(double cash, double card, double mobile) onConfirm,
   }) async {
-    await showCupertinoModalPopup(
+    await showCupertinoDialog(
       context: context,
-      builder: (ctx) => SizedBox(
-        height: MediaQuery.of(ctx).size.height * 0.9,
-        child: PaymentModal(total: total, onConfirm: onConfirm),
+      builder: (ctx) => Center(
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 480, minWidth: 340),
+            padding: const EdgeInsets.all(0),
+            decoration: BoxDecoration(
+              color: CupertinoColors.systemBackground,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: CupertinoColors.black.withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: PaymentModal(total: total, onConfirm: onConfirm),
+          ),
+        ),
       ),
     );
   }
@@ -139,18 +159,32 @@ class _PaymentModalState extends State<PaymentModal> {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: Text(
+              'الدفع',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ),
           Expanded(
             child: ListView(
               children: [
                 for (final part in _parts) _paymentPartRow(part, c),
                 const SizedBox(height: AppSpacing.sm),
-                CupertinoButton(
-                  onPressed: _addPart,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: const Icon(CupertinoIcons.add),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CupertinoButton(
+                      onPressed: _addPart,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: const Icon(CupertinoIcons.add),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
+                  alignment: WrapAlignment.center,
                   spacing: 8,
                   children: [
                     for (final inc in [5, 10, 20, 50])
@@ -164,14 +198,49 @@ class _PaymentModalState extends State<PaymentModal> {
                 const SizedBox(height: AppSpacing.sm),
                 _indicatorRow('المتبقي', _remaining, c),
                 _indicatorRow('الصرف', _change, c, isChange: true),
+                const SizedBox(height: 12),
+                NumericKeypad(
+                  onKey: (val) {
+                    if (_focusedPart != null) {
+                      final ctrl = _controllers[_focusedPart]!;
+                      ctrl.text += val;
+                      _recalc();
+                    }
+                  },
+                  onBackspace: () {
+                    if (_focusedPart != null) {
+                      final ctrl = _controllers[_focusedPart]!;
+                      if (ctrl.text.isNotEmpty) {
+                        ctrl.text = ctrl.text.substring(
+                          0,
+                          ctrl.text.length - 1,
+                        );
+                        _recalc();
+                      }
+                    }
+                  },
+                  onClear: () {
+                    if (_focusedPart != null) {
+                      final ctrl = _controllers[_focusedPart]!;
+                      ctrl.clear();
+                      _recalc();
+                    }
+                  },
+                ),
               ],
             ),
           ),
-          CupertinoButton.filled(
-            onPressed: _canProceed
-                ? () => setState(() => _step = _PaymentStep.summary)
-                : null,
-            child: const Text('التالي'),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 8.0,
+              horizontal: 16.0,
+            ),
+            child: CupertinoButton.filled(
+              onPressed: _canProceed
+                  ? () => setState(() => _step = _PaymentStep.summary)
+                  : null,
+              child: const Text('التالي'),
+            ),
           ),
         ],
       );
@@ -179,23 +248,22 @@ class _PaymentModalState extends State<PaymentModal> {
       body = Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12.0),
+            child: Text(
+              'مراجعة الدفعات',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            ),
+          ),
           Expanded(
             child: ListView(
               children: [
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'مراجعة الدفعات',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
                 for (final p in _parts) _summaryRow(p, c),
                 Container(
                   height: 1,
                   margin: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-                  color: c.border.withOpacity(0.4),
+                  color: c.border.withValues(alpha: 0.4),
                 ),
                 _indicatorRow('الإجمالي المدفوع', _paid, c),
                 _indicatorRow('المتبقي', _remaining, c),
@@ -204,67 +272,68 @@ class _PaymentModalState extends State<PaymentModal> {
               ],
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: CupertinoButton(
-                  onPressed: _submitting
-                      ? null
-                      : () => setState(() => _step = _PaymentStep.methods),
-                  child: const Text('رجوع'),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: 8.0,
+              horizontal: 16.0,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CupertinoButton(
+                    onPressed: _submitting
+                        ? null
+                        : () => setState(() => _step = _PaymentStep.methods),
+                    child: const Text('رجوع'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: CupertinoButton.filled(
-                  onPressed: _canProceed && !_submitting ? _confirm : null,
-                  child: _submitting
-                      ? const CupertinoActivityIndicator()
-                      : const Text('تأكيد'),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: CupertinoButton.filled(
+                    onPressed: _canProceed && !_submitting ? _confirm : null,
+                    child: _submitting
+                        ? const CupertinoActivityIndicator()
+                        : const Text('تأكيد'),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 8),
+                Expanded(
+                  child: CupertinoButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    child: const Text('خروج'),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       );
     }
 
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: Text('الدفع ${widget.total.toStringAsFixed(2)}'),
-        leading: _step == _PaymentStep.summary
-            ? CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: () => setState(() => _step = _PaymentStep.methods),
-                child: const Icon(CupertinoIcons.back),
-              )
-            : null,
-        trailing: _step == _PaymentStep.methods
-            ? CupertinoButton(
-                padding: EdgeInsets.zero,
-                onPressed: _canProceed
-                    ? () => setState(() => _step = _PaymentStep.summary)
-                    : null,
-                child: Text(
-                  'مراجعة',
-                  style: TextStyle(
-                    color: _canProceed ? c.primary : c.textSecondary,
-                  ),
-                ),
-              )
-            : null,
-      ),
-      child: SafeArea(
-        child: AnimatedSwitcher(
-          duration: Motion.base,
-          switchInCurve: Motion.easeOut,
-          switchOutCurve: Motion.easeInOut,
-          child: Padding(
-            key: ValueKey(_step),
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: body,
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: Stack(
+        children: [
+          body,
+          Positioned(
+            top: 0,
+            right: 0,
+            child: CupertinoButton(
+              padding: const EdgeInsets.all(0),
+              minimumSize: const Size(32, 32),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Icon(
+                CupertinoIcons.xmark_circle,
+                size: 28,
+                color: CupertinoColors.systemGrey,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -320,18 +389,27 @@ class _PaymentModalState extends State<PaymentModal> {
           const SizedBox(width: AppSpacing.xs),
           Expanded(
             flex: 3,
-            child: AppInputField(
-              controller: ctrl,
-              label: 'المبلغ',
-              placeholder: '0.00',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+            child: Focus(
+              onFocusChange: (hasFocus) {
+                if (hasFocus) {
+                  setState(() {
+                    _focusedPart = part;
+                  });
+                }
+              },
+              child: AppInputField(
+                controller: ctrl,
+                label: 'المبلغ',
+                placeholder: '0.00',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                ],
+                onChanged: (_) => _recalc(),
+                error: part.amount < 0 ? 'قيمة غير صالحة' : null,
               ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              onChanged: (_) => _recalc(),
-              error: part.amount < 0 ? 'قيمة غير صالحة' : null,
             ),
           ),
           const SizedBox(width: 4),

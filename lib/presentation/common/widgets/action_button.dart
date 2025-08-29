@@ -22,6 +22,7 @@ class ActionButton extends StatelessWidget {
       padding: padding,
       color: color,
       onPressed: onPressed,
+      minimumSize: const Size(0, 48), // Replaced minSize with minimumSize
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

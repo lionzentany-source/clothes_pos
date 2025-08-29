@@ -39,7 +39,11 @@ Future<void> main(List<String> args) async {
 
   final dbName = 'clothes_pos.db';
   String? dbArg;
-  for (final a in args) if (a.startsWith('--db=')) dbArg = a.split('=')[1];
+  for (final a in args) {
+    if (a.startsWith('--db=')) {
+      dbArg = a.split('=')[1];
+    }
+  }
   final dbPath = dbArg != null && dbArg.isNotEmpty
       ? dbArg
       : p.join(cwd, '.dart_tool', 'sqflite_common_ffi', 'databases', dbName);

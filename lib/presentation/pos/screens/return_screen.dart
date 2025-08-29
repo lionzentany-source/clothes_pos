@@ -188,7 +188,7 @@ class _ReturnLineEditorState extends State<_ReturnLineEditor> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Text(
-            'SaleItem ${m.saleItemId} — المتبقي: ${m.remaining} — السعر: ${money(context, m.unitPrice)}',
+            'SaleItem ${m.saleItemId} - المتبقي: ${m.remaining} - السعر: ${money(context, m.unitPrice)}',
             textDirection: TextDirection.rtl,
           ),
           const SizedBox(height: 6),

@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Tooltip;
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/supplier_repository.dart';
 import 'package:clothes_pos/data/models/supplier.dart';
@@ -53,17 +54,28 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
                 title: const Text('إضافة مورد'),
                 content: Column(
                   children: [
-                    const SizedBox(height: 8),
-                    CupertinoTextField(
-                      controller: nameCtrl,
-                      placeholder: 'اسم المورد',
-                      textDirection: TextDirection.rtl,
-                    ),
-                    const SizedBox(height: 8),
-                    CupertinoTextField(
-                      controller: contactCtrl,
-                      placeholder: 'بيانات التواصل (اختياري)',
-                      textDirection: TextDirection.rtl,
+                    SingleChildScrollView(
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxHeight: MediaQuery.of(ctx).size.height * 0.6,
+                        ),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 8),
+                            CupertinoTextField(
+                              controller: nameCtrl,
+                              placeholder: 'اسم المورد',
+                              textDirection: TextDirection.rtl,
+                            ),
+                            const SizedBox(height: 8),
+                            CupertinoTextField(
+                              controller: contactCtrl,
+                              placeholder: 'بيانات التواصل (اختياري)',
+                              textDirection: TextDirection.rtl,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -139,8 +151,11 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
                       itemBuilder: (context, i) {
                         final s = _results[i];
                         return CupertinoListTile(
-                          title: Text(s.name),
-                          subtitle: Text('ID ${s.id}'),
+                          title: Tooltip(
+                            message: 'ID ${s.id}',
+                            child: Text(s.name),
+                          ),
+                          subtitle: const SizedBox.shrink(),
                           onTap: () => Navigator.of(context).pop<Supplier>(s),
                         );
                       },

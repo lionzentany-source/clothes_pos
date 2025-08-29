@@ -4,6 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'dart:typed_data';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:clothes_pos/core/printing/system_pdf_printer.dart';
+import 'package:clothes_pos/core/printing/thermal_print_service.dart';
+import 'package:clothes_pos/core/printing/escpos_generator.dart';
 import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 class PrintingSettingsScreen extends StatefulWidget {
@@ -21,6 +23,8 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
   bool _loading = true;
   bool _openDialog = true;
   String? _printerName;
+  final _thermalIpCtrl = TextEditingController();
+  final _thermalPortCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -37,6 +41,10 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
       _fontSizeCtrl.text = await _settings.get('print_font_size') ?? '10';
       _openDialog = (await _settings.get('print_open_dialog')) != '0';
       _printerName = await _settings.get('print_printer_name');
+      _thermalIpCtrl.text =
+          await _settings.get('thermal_printer_ip') ?? '192.168.1.100';
+      _thermalPortCtrl.text =
+          await _settings.get('thermal_printer_port') ?? '9100';
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -51,6 +59,8 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
       await _settings.set('print_margin', _marginCtrl.text.trim());
       await _settings.set('print_font_size', _fontSizeCtrl.text.trim());
       await _settings.set('print_open_dialog', _openDialog ? '1' : '0');
+      await _settings.set('thermal_printer_ip', _thermalIpCtrl.text.trim());
+      await _settings.set('thermal_printer_port', _thermalPortCtrl.text.trim());
       if (!mounted) return;
       await showCupertinoDialog(
         context: context,
@@ -114,6 +124,8 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
     _pageHeightCtrl.dispose();
     _marginCtrl.dispose();
     _fontSizeCtrl.dispose();
+    _thermalIpCtrl.dispose();
+    _thermalPortCtrl.dispose();
     super.dispose();
   }
 
@@ -173,7 +185,30 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+
+                  const SizedBox(height: 16),
+                  const Text('الطابعة الحرارية (شبكة)'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoTextField(
+                          placeholder: 'IP: 192.168.1.100',
+                          controller: _thermalIpCtrl,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 100,
+                        child: CupertinoTextField(
+                          placeholder: 'Port: 9100',
+                          controller: _thermalPortCtrl,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
                   Text(l.defaultPrinter),
                   const SizedBox(height: 6),
                   Text(
@@ -209,6 +244,76 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
                             await SystemPdfPrinter().printPdfBytes(docBytes);
                           },
                     child: Text(l.testPrinter),
+                  ),
+                  const SizedBox(height: 12),
+                  // Thermal printer (network) quick test
+                  CupertinoButton(
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                            try {
+                              final gen = await EscposGenerator80.create();
+                              final bytes = gen.buildTestTicket(
+                                title: 'اختبار حراري 80mm',
+                              );
+                              final ip = _thermalIpCtrl.text.trim().isEmpty
+                                  ? '192.168.1.100'
+                                  : _thermalIpCtrl.text.trim();
+                              final port =
+                                  int.tryParse(_thermalPortCtrl.text.trim()) ??
+                                  9100;
+                              await const ThermalPrintService()
+                                  .sendBytesToNetwork(
+                                    bytes: bytes,
+                                    ip: ip,
+                                    port: port,
+                                  );
+                              if (!mounted) return;
+                              if (!context.mounted) return;
+                              await showCupertinoDialog(
+                                context: context,
+                                builder: (dialogCtx) {
+                                  final l2 = AppLocalizations.of(dialogCtx);
+                                  return CupertinoAlertDialog(
+                                    title: Text(l2.done),
+                                    content: const Text(
+                                      'تم إرسال صفحة اختبار للطابعة الحرارية (شبكة).',
+                                    ),
+                                    actions: [
+                                      CupertinoDialogAction(
+                                        isDefaultAction: true,
+                                        onPressed: () =>
+                                            Navigator.of(dialogCtx).pop(),
+                                        child: Text(l2.ok),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            } catch (e) {
+                              if (!mounted) return;
+                              if (!context.mounted) return;
+                              await showCupertinoDialog(
+                                context: context,
+                                builder: (dialogCtx) {
+                                  final l2 = AppLocalizations.of(dialogCtx);
+                                  return CupertinoAlertDialog(
+                                    title: Text(l2.error),
+                                    content: Text(e.toString()),
+                                    actions: [
+                                      CupertinoDialogAction(
+                                        isDefaultAction: true,
+                                        onPressed: () =>
+                                            Navigator.of(dialogCtx).pop(),
+                                        child: Text(l2.ok),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            }
+                          },
+                    child: const Text('اختبار طابعة حرارية (شبكة 80mm)'),
                   ),
                   const SizedBox(height: 12),
                   CupertinoButton.filled(

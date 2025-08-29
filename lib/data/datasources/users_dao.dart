@@ -1,5 +1,6 @@
 import 'package:clothes_pos/core/db/database_helper.dart';
 import 'package:clothes_pos/data/models/user.dart';
+import 'package:clothes_pos/core/auth/auth_service.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:bcrypt/bcrypt.dart';
 
@@ -11,73 +12,17 @@ class UsersDao {
   /// and that the Admin role contains all current permissions.
   /// If password is placeholder (SET_ME) it is left for first login initialization.
   Future<void> ensureAdminUser() async {
-    final db = await _dbHelper.database;
-    await db.transaction((txn) async {
-      // 1. Ensure Admin role exists
-      final roleRow = await txn.rawQuery(
-        'SELECT id FROM roles WHERE name = ? LIMIT 1',
-        ['Admin'],
-      );
-      int roleId;
-      if (roleRow.isEmpty) {
-        roleId = await txn.insert('roles', {'name': 'Admin'});
-      } else {
-        roleId = roleRow.first['id'] as int;
-      }
-
-      // 2. Ensure all permissions exist in table (in case new codes added elsewhere)
-      // (We rely on other seed/migrations for insertion; here we just fetch IDs)
-      final permRows = await txn.rawQuery('SELECT id FROM permissions');
-      final permIds = permRows.map((e) => e['id'] as int).toList();
-
-      // 3. Ensure admin user exists
-      final userRow = await txn.rawQuery(
-        'SELECT id,password_hash,is_active FROM users WHERE username = ? LIMIT 1',
-        ['admin'],
-      );
-      int userId;
-      if (userRow.isEmpty) {
-        userId = await txn.insert('users', {
-          'username': 'admin',
-          'full_name': 'Administrator',
-          'password_hash': 'SET_ME',
-          'is_active': 1,
-        });
-      } else {
-        userId = userRow.first['id'] as int;
-        // Reactivate if deactivated accidentally
-        if ((userRow.first['is_active'] as int) == 0) {
-          await txn.update(
-            'users',
-            {'is_active': 1},
-            where: 'id = ?',
-            whereArgs: [userId],
-          );
-        }
-      }
-
-      // 4. Link user to Admin role
-      await txn.insert('user_roles', {
-        'user_id': userId,
-        'role_id': roleId,
-      }, conflictAlgorithm: ConflictAlgorithm.ignore);
-
-      // 5. Ensure Admin role has all permissions
-      for (final pid in permIds) {
-        await txn.insert('role_permissions', {
-          'role_id': roleId,
-          'permission_id': pid,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-    });
+    // Delegate to AuthService for consistent admin user setup
+    await AuthService.instance.setupInitialAdminUserIfNeeded();
   }
 
-  Future<List<AppUser>> listAllUsers() async {
+  Future<List<AppUser>> listAllUsers({int limit = 100}) async {
     final db = await _dbHelper.database;
     final rows = await db.query(
       'users',
       columns: ['id', 'username', 'full_name', 'is_active'],
       orderBy: 'full_name COLLATE NOCASE ASC',
+      limit: limit,
     );
     return rows
         .map(
@@ -160,9 +105,9 @@ class UsersDao {
     );
   }
 
-  Future<List<Map<String, Object?>>> listRoles() async {
+  Future<List<Map<String, Object?>>> listRoles({int limit = 50}) async {
     final db = await _dbHelper.database;
-    return db.query('roles', orderBy: 'name COLLATE NOCASE ASC');
+    return db.query('roles', orderBy: 'name COLLATE NOCASE ASC', limit: limit);
   }
 
   Future<List<int>> getUserRoleIds(int userId) async {

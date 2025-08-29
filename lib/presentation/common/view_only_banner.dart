@@ -44,7 +44,7 @@ class ViewOnlyBanner extends StatelessWidget {
       padding:
           padding ?? const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: CupertinoColors.systemYellow.withOpacity(0.25),
+        color: CupertinoColors.systemYellow.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Directionality(textDirection: dir, child: content),

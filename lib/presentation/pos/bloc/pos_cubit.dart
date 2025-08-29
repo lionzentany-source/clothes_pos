@@ -12,6 +12,7 @@ import 'dart:async';
 part 'pos_state.dart';
 
 class PosCubit extends Cubit<PosState> {
+  ProductRepository get products => _products;
   final ProductRepository _products = sl<ProductRepository>();
   final SalesRepository _sales = sl<SalesRepository>();
   final Map<int, String> _variantNameCache = {};
@@ -85,6 +86,10 @@ class PosCubit extends Cubit<PosState> {
           filters['size']!.toLowerCase(),
         );
       }
+      // استبعاد المنتجات التي كميتها 0
+      if ((m['quantity'] is int) && (m['quantity'] as int) <= 0) {
+        ok = false;
+      }
       return ok;
     }).toList();
     emit(state.copyWith(searching: false, searchResults: refined));
@@ -122,9 +127,29 @@ class PosCubit extends Cubit<PosState> {
     await search(state.query, categoryId: categoryId);
   }
 
-  void addToCart(int variantId, double price) {
+  Future<void> addToCart(int variantId, double price) async {
     final updated = List<CartLine>.from(state.cart);
     final idx = updated.indexWhere((l) => l.variantId == variantId);
+    // جلب الكمية المتوفرة من قاعدة البيانات (batched when possible)
+    int availableQty = 0;
+    try {
+      final ids = [variantId];
+      final rows = await _products.dao.getVariantRowsByIds(ids);
+      if (rows.isNotEmpty) {
+        final row = rows.first;
+        availableQty = row['quantity'] is int ? row['quantity'] as int : 0;
+      }
+    } catch (_) {}
+    int currentQty = idx >= 0 ? updated[idx].quantity : 0;
+    if (currentQty + 1 > availableQty) {
+      // عرض رسالة خطأ (يمكن تعديلها لاحقاً لعرضها في الواجهة)
+      emit(
+        state.copyWith(
+          errorMessage: 'لا يمكن إضافة كمية أكبر من المتوفر في المخزون',
+        ),
+      );
+      return;
+    }
     if (idx >= 0) {
       updated[idx] = updated[idx].copyWith(quantity: updated[idx].quantity + 1);
     } else {
@@ -132,18 +157,36 @@ class PosCubit extends Cubit<PosState> {
       // Prefetch variant name asynchronously (non-blocking)
       resolveVariantName(variantId);
     }
-    emit(state.copyWith(cart: updated));
+    emit(state.copyWith(cart: updated, errorMessage: null));
   }
 
   Future<String?> resolveVariantName(int variantId) async {
-    if (_variantNameCache.containsKey(variantId))
+    if (_variantNameCache.containsKey(variantId)) {
       return _variantNameCache[variantId];
+    }
     final name = await _products.getVariantDisplayName(variantId);
     if (name != null) _variantNameCache[variantId] = name;
     return name;
   }
 
-  void changeQty(int variantId, int qty) {
+  Future<void> changeQty(int variantId, int qty) async {
+    // جلب الكمية المتوفرة من قاعدة البيانات (batched when possible)
+    int availableQty = 0;
+    try {
+      final rows = await _products.dao.getVariantRowsByIds([variantId]);
+      if (rows.isNotEmpty) {
+        final row = rows.first;
+        availableQty = row['quantity'] is int ? row['quantity'] as int : 0;
+      }
+    } catch (_) {}
+    if (qty > availableQty) {
+      emit(
+        state.copyWith(
+          errorMessage: 'لا يمكن إضافة كمية أكبر من المتوفر في المخزون',
+        ),
+      );
+      return;
+    }
     final updated = state.cart
         .map(
           (l) => l.variantId == variantId
@@ -151,7 +194,7 @@ class PosCubit extends Cubit<PosState> {
               : l,
         )
         .toList();
-    emit(state.copyWith(cart: updated));
+    emit(state.copyWith(cart: updated, errorMessage: null));
   }
 
   void removeLine(int variantId) {
@@ -185,6 +228,7 @@ class PosCubit extends Cubit<PosState> {
   Future<int> checkoutWithPayments({
     required List<Payment> payments,
     int userId = 1,
+    int? customerId,
   }) async {
     if (state.cart.isEmpty) {
       // Using English key fallback; actual localization should be handled at UI layer.
@@ -192,7 +236,12 @@ class PosCubit extends Cubit<PosState> {
     }
     emit(state.copyWith(checkingOut: true));
 
-    final sale = Sale(userId: userId, totalAmount: 0, saleDate: DateTime.now());
+    final sale = Sale(
+      userId: userId,
+      customerId: customerId,
+      totalAmount: 0,
+      saleDate: DateTime.now(),
+    );
     final items = state.cart
         .map(
           (l) => SaleItem(
@@ -209,12 +258,36 @@ class PosCubit extends Cubit<PosState> {
         .toList();
 
     try {
+      // Fill costAtSale from current variant cost
+      try {
+        // Batch load all variant rows once
+        final variantIds = items.map((it) => it.variantId).toSet().toList();
+        final rows = await _products.dao.getVariantRowsByIds(variantIds);
+        final mapById = {for (var r in rows) (r['id'] as int): r};
+        for (var i = 0; i < items.length; i++) {
+          final r = mapById[items[i].variantId];
+          final cost = (r?['cost_price'] as num?)?.toDouble() ?? 0.0;
+          items[i] = SaleItem(
+            saleId: items[i].saleId,
+            variantId: items[i].variantId,
+            quantity: items[i].quantity,
+            pricePerUnit: items[i].pricePerUnit,
+            costAtSale: cost,
+            discountAmount: items[i].discountAmount,
+            taxAmount: items[i].taxAmount,
+            note: items[i].note,
+          );
+        }
+      } catch (_) {}
+
       final saleId = await _sales.createSale(
         sale: sale,
         items: items,
         payments: payments,
       );
       emit(state.copyWith(cart: const [], checkingOut: false));
+      // إعادة تحميل نتائج البحث مباشرة بعد البيع
+      await search(state.query, categoryId: state.selectedCategoryId);
       return saleId;
     } finally {
       emit(state.copyWith(checkingOut: false));

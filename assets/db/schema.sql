@@ -2,8 +2,6 @@
 -- Use with WAL mode for performance: PRAGMA journal_mode=WAL;
 -- Ensure foreign keys: PRAGMA foreign_keys=ON;
 
-BEGIN TRANSACTION;
-
 -- Core dictionaries
 CREATE TABLE IF NOT EXISTS categories (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,6 +15,12 @@ CREATE TABLE IF NOT EXISTS suppliers (
   UNIQUE(name)
 );
 
+-- Brands
+CREATE TABLE IF NOT EXISTS brands (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE
+);
+
 -- Products
 CREATE TABLE IF NOT EXISTS parent_products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -24,9 +28,11 @@ CREATE TABLE IF NOT EXISTS parent_products (
   description TEXT,
   category_id INTEGER NOT NULL,
   supplier_id INTEGER,
+  brand_id INTEGER,
   image_path TEXT,
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT,
-  FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+  FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL,
+  FOREIGN KEY (brand_id) REFERENCES brands(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS product_variants (
@@ -43,9 +49,19 @@ CREATE TABLE IF NOT EXISTS product_variants (
   quantity INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  image_path TEXT,
   FOREIGN KEY (parent_product_id) REFERENCES parent_products(id) ON DELETE CASCADE,
   -- UNIQUE(sku) -- removed to allow nullable/duplicate SKUs
   UNIQUE(barcode)
+);
+
+-- Mapping table to attach attributes to parent (product) records
+CREATE TABLE IF NOT EXISTS parent_attributes (
+  parent_id INTEGER NOT NULL,
+  attribute_id INTEGER NOT NULL,
+  PRIMARY KEY (parent_id, attribute_id),
+  FOREIGN KEY (parent_id) REFERENCES parent_products(id) ON DELETE CASCADE,
+  FOREIGN KEY (attribute_id) REFERENCES attributes(id) ON DELETE CASCADE
 );
 
 CREATE TRIGGER IF NOT EXISTS trg_product_variants_updated
@@ -238,21 +254,75 @@ CREATE TABLE IF NOT EXISTS audit_log (
 CREATE INDEX IF NOT EXISTS idx_variants_parent ON product_variants(parent_product_id);
 CREATE INDEX IF NOT EXISTS idx_variants_sku ON product_variants(sku);
 CREATE INDEX IF NOT EXISTS idx_variants_barcode ON product_variants(barcode);
-CREATE INDEX IF NOT EXISTS idx_variants_rfid ON product_variants(rfid_tag);
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(sale_date);
 CREATE INDEX IF NOT EXISTS idx_sales_user ON sales(user_id);
-CREATE INDEX IF NOT EXISTS idx_sales_customer ON sales(customer_id);
 CREATE INDEX IF NOT EXISTS idx_sale_items_sale ON sale_items(sale_id);
-CREATE INDEX IF NOT EXISTS idx_sale_items_variant ON sale_items(variant_id);
 CREATE INDEX IF NOT EXISTS idx_movements_variant ON inventory_movements(variant_id);
 CREATE INDEX IF NOT EXISTS idx_movements_created ON inventory_movements(created_at);
 CREATE INDEX IF NOT EXISTS idx_purchases_supplier ON purchase_invoices(supplier_id);
-CREATE INDEX IF NOT EXISTS idx_purchases_received ON purchase_invoices(received_date);
 CREATE INDEX IF NOT EXISTS idx_purchase_items_invoice ON purchase_invoice_items(purchase_invoice_id);
-CREATE INDEX IF NOT EXISTS idx_purchase_items_variant ON purchase_invoice_items(variant_id);
 CREATE INDEX IF NOT EXISTS idx_payments_sale ON payments(sale_id);
-CREATE INDEX IF NOT EXISTS idx_payments_session ON payments(cash_session_id);
 CREATE INDEX IF NOT EXISTS idx_cash_session_opened ON cash_sessions(opened_at);
 
-COMMIT;
+-- Additional tables and indexes from migrations
+CREATE TABLE IF NOT EXISTS product_variant_rfids (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  variant_id INTEGER NOT NULL,
+  epc TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE CASCADE
+);
+
+-- Expenses module tables
+CREATE TABLE IF NOT EXISTS expense_categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  is_active INTEGER NOT NULL DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  category_id INTEGER NOT NULL,
+  amount REAL NOT NULL,
+  paid_via TEXT NOT NULL, -- 'cash' | 'bank' | 'other'
+  cash_session_id INTEGER, -- nullable linkage to cash sessions
+  date TEXT NOT NULL, -- ISO8601 date
+  description TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  FOREIGN KEY(category_id) REFERENCES expense_categories(id),
+  FOREIGN KEY(cash_session_id) REFERENCES cash_sessions(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pvr_variant ON product_variant_rfids(variant_id);
+CREATE INDEX IF NOT EXISTS idx_parent_brand ON parent_products(brand_id);
+CREATE INDEX IF NOT EXISTS idx_parent_category ON parent_products(category_id);
+CREATE INDEX IF NOT EXISTS idx_variants_reorder_qty ON product_variants(reorder_point, quantity);
+CREATE INDEX IF NOT EXISTS idx_parent_products_brand_category ON parent_products(brand_id, category_id);
+
+
+-- Audit log table
+CREATE TABLE IF NOT EXISTS audit_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  entity TEXT NOT NULL,
+  field TEXT NOT NULL,
+  old_value TEXT,
+  new_value TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Usage Logs table
+CREATE TABLE IF NOT EXISTS usage_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  timestamp TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  event_type TEXT NOT NULL,
+  event_details TEXT, -- JSON string
+  user_id INTEGER,
+  session_id TEXT,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_usage_logs_timestamp ON usage_logs(timestamp);
+CREATE INDEX IF NOT EXISTS idx_usage_logs_event_type ON usage_logs(event_type);
 

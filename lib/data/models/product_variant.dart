@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:clothes_pos/data/models/attribute.dart';
 
 class ProductVariant extends Equatable {
   final int? id;
@@ -12,6 +13,8 @@ class ProductVariant extends Equatable {
   final double salePrice;
   final int reorderPoint;
   final int quantity;
+  final String? imagePath;
+  final List<AttributeValue>? attributes;
 
   const ProductVariant({
     this.id,
@@ -25,6 +28,8 @@ class ProductVariant extends Equatable {
     required this.salePrice,
     this.reorderPoint = 0,
     this.quantity = 0,
+    this.imagePath,
+    this.attributes,
   });
 
   ProductVariant copyWith({
@@ -39,6 +44,8 @@ class ProductVariant extends Equatable {
     double? salePrice,
     int? reorderPoint,
     int? quantity,
+    String? imagePath,
+    List<AttributeValue>? attributes,
   }) => ProductVariant(
     id: id ?? this.id,
     parentProductId: parentProductId ?? this.parentProductId,
@@ -51,6 +58,8 @@ class ProductVariant extends Equatable {
     salePrice: salePrice ?? this.salePrice,
     reorderPoint: reorderPoint ?? this.reorderPoint,
     quantity: quantity ?? this.quantity,
+    imagePath: imagePath ?? this.imagePath,
+    attributes: attributes ?? this.attributes,
   );
 
   factory ProductVariant.fromMap(Map<String, Object?> map) => ProductVariant(
@@ -65,6 +74,7 @@ class ProductVariant extends Equatable {
     salePrice: (map['sale_price'] as num).toDouble(),
     reorderPoint: map['reorder_point'] as int,
     quantity: map['quantity'] as int,
+    imagePath: map['image_path'] as String?,
   );
 
   Map<String, Object?> toMap() => {
@@ -79,6 +89,7 @@ class ProductVariant extends Equatable {
     'sale_price': salePrice,
     'reorder_point': reorderPoint,
     'quantity': quantity,
+    if (imagePath != null) 'image_path': imagePath,
   };
 
   @override
@@ -94,5 +105,7 @@ class ProductVariant extends Equatable {
     salePrice,
     reorderPoint,
     quantity,
+    imagePath,
+    attributes,
   ];
 }

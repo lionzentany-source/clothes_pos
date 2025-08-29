@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart' as p;
 
 import '../logging/app_logger.dart';
+import '../logging/usage_logger.dart'; // Import UsageLogger
+import '../di/locator.dart'; // Import locator for sl()
 
 /// Periodic backup service that creates timestamped copies of the SQLite DB.
 class BackupService {
@@ -15,6 +17,7 @@ class BackupService {
   Timer? _timer;
   bool _running = false;
   final _fmt = DateFormat('yyyyMMdd_HHmmss');
+  final UsageLogger _usageLogger = sl<UsageLogger>(); // Inject UsageLogger
 
   BackupService({
     required this.dbPath,
@@ -68,6 +71,7 @@ class BackupService {
         'BackupService: created ${dest.path} size=${await dest.length()} manual=$manual',
       );
       await _retention();
+      await _usageLogger.clearOldUsageLogs(); // Clear old usage logs after successful backup
     } catch (e) {
       AppLogger.e('BackupService run failed manual=$manual', error: e);
     } finally {

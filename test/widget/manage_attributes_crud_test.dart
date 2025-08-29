@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/attributes/screens/manage_attributes_screen.dart';
+import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:clothes_pos/presentation/attributes/bloc/attributes_cubit.dart';
 import 'package:clothes_pos/data/repositories/attribute_repository.dart';
 import 'package:clothes_pos/data/datasources/attribute_dao.dart';
@@ -24,7 +25,11 @@ class FakeAttributeDao implements AttributeDao {
 
   @override
   Future<int> createAttributeValue(AttributeValue value) async {
-    final v = AttributeValue(id: _nextValueId++, attributeId: value.attributeId, value: value.value);
+    final v = AttributeValue(
+      id: _nextValueId++,
+      attributeId: value.attributeId,
+      value: value.value,
+    );
     _values.putIfAbsent(value.attributeId, () => []).add(v);
     return v.id!;
   }
@@ -52,10 +57,12 @@ class FakeAttributeDao implements AttributeDao {
   Future<List<Attribute>> getAllAttributes() async => List.of(_attrs);
 
   @override
-  Future<Attribute> getAttributeById(int id) async => _attrs.firstWhere((a) => a.id == id);
+  Future<Attribute> getAttributeById(int id) async =>
+      _attrs.firstWhere((a) => a.id == id);
 
   @override
-  Future<List<AttributeValue>> getAttributeValues(int attributeId) async => List.of(_values[attributeId] ?? []);
+  Future<List<AttributeValue>> getAttributeValues(int attributeId) async =>
+      List.of(_values[attributeId] ?? []);
 
   @override
   Future<int> updateAttribute(Attribute attribute) async {
@@ -75,7 +82,16 @@ class FakeAttributeDao implements AttributeDao {
 
   // Unused in test but required by interface
   @override
-  Future<List<AttributeValue>> getAttributeValuesForVariant(int variantId) async => [];
+  Future<List<AttributeValue>> getAttributeValuesForVariant(
+    int variantId,
+  ) async => [];
+
+  @override
+  Future<Map<int, List<AttributeValue>>> getAttributeValuesForVariantIds(
+    List<int> variantIds,
+  ) async {
+    return <int, List<AttributeValue>>{};
+  }
 }
 
 void main() {
@@ -88,6 +104,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: BlocProvider.value(
           value: cubit,
           child: const ManageAttributesScreen(),
@@ -114,7 +132,9 @@ void main() {
     expect(find.text('Material'), findsOneWidget);
 
     // Edit attribute
-    await tester.tap(find.widgetWithIcon(CupertinoButton, CupertinoIcons.pencil).first);
+    await tester.tap(
+      find.widgetWithIcon(CupertinoButton, CupertinoIcons.pencil).first,
+    );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(CupertinoTextField), 'Fabric');
     await tester.tap(find.text('Save'));
@@ -126,7 +146,9 @@ void main() {
     expect(find.text('Fabric'), findsOneWidget);
 
     // Add attribute value
-    final addValueBtn = find.widgetWithIcon(CupertinoButton, CupertinoIcons.add).at(1);
+    final addValueBtn = find
+        .widgetWithIcon(CupertinoButton, CupertinoIcons.add)
+        .at(1);
     await tester.tap(addValueBtn);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(CupertinoTextField), 'Cotton');
@@ -139,7 +161,9 @@ void main() {
     expect(find.text('Cotton'), findsOneWidget);
 
     // Edit attribute value
-    await tester.tap(find.widgetWithIcon(CupertinoButton, CupertinoIcons.pencil).at(1));
+    await tester.tap(
+      find.widgetWithIcon(CupertinoButton, CupertinoIcons.pencil).at(1),
+    );
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(CupertinoTextField), 'Organic Cotton');
     await tester.tap(find.text('Save'));
@@ -151,7 +175,9 @@ void main() {
     expect(find.text('Organic Cotton'), findsOneWidget);
 
     // Delete attribute value (confirm + dismiss)
-    await tester.tap(find.widgetWithIcon(CupertinoButton, CupertinoIcons.delete).at(1));
+    await tester.tap(
+      find.widgetWithIcon(CupertinoButton, CupertinoIcons.delete).at(1),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
@@ -160,7 +186,9 @@ void main() {
     expect(find.text('Organic Cotton'), findsNothing);
 
     // Delete attribute (confirm + dismiss)
-    await tester.tap(find.widgetWithIcon(CupertinoButton, CupertinoIcons.delete).first);
+    await tester.tap(
+      find.widgetWithIcon(CupertinoButton, CupertinoIcons.delete).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();

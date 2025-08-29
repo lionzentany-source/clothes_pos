@@ -26,10 +26,13 @@ linter:
     always_declare_return_types: true
 
 analyzer:
+  errors:
+    unnecessary_underscores: ignore
   exclude:
-    - lib/l10n/**
-    - lib/l10n_clean/*.dart
-    - lib/l10n_clean/*.g.dart
+    - "lib/l10n/**"
+    - "lib/l10n_clean/*.dart"
+    - "lib/l10n_clean/*.g.dart"
+    - "new_facebook/**"
 
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

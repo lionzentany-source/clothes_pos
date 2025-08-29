@@ -453,7 +453,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String stockLowIndicator(Object qty, Object rp, Object sku) {
-    return 'SKU $sku: $qty — RP $rp';
+    return 'SKU $sku: $qty - RP $rp';
   }
 
   @override
@@ -704,4 +704,77 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get testPrinter => 'Test Printer';
+
+  @override
+  String get manageAttributesTitle => 'Manage Attributes';
+
+  @override
+  String get attributeNoun => 'Attribute';
+
+  @override
+  String get noValuesYet => 'No values yet';
+
+  @override
+  String get valueNoun => 'Value';
+
+  @override
+  String get noAttributesLoaded => 'No attributes loaded';
+
+  @override
+  String get addNewAttribute => 'Add attribute';
+
+  @override
+  String get attributeNamePlaceholder => 'Attribute name';
+
+  @override
+  String get nameRequired => 'Name is required';
+
+  @override
+  String get attributeExists => 'An attribute with that name already exists';
+
+  @override
+  String get attributeAdded => 'Attribute added';
+
+  @override
+  String get editAttribute => 'Edit attribute';
+
+  @override
+  String get attributeSaved => 'Attribute saved';
+
+  @override
+  String get addNewValue => 'Add value';
+
+  @override
+  String get valuePlaceholder => 'Value';
+
+  @override
+  String get valueRequired => 'Value is required';
+
+  @override
+  String get valueAdded => 'Value added';
+
+  @override
+  String get editValue => 'Edit value';
+
+  @override
+  String get valueSaved => 'Value saved';
+
+  @override
+  String get confirmDelete => 'Confirm delete';
+
+  @override
+  String deleteAttributePrompt(Object name) {
+    return 'Delete attribute $name?';
+  }
+
+  @override
+  String deleteValuePrompt(Object value) {
+    return 'Delete value $value?';
+  }
+
+  @override
+  String get attributeDeleted => 'Attribute deleted';
+
+  @override
+  String get valueDeleted => 'Value deleted';
 }

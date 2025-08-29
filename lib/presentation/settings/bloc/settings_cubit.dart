@@ -7,23 +7,45 @@ import 'package:clothes_pos/data/repositories/settings_repository.dart';
 class SettingsState extends Equatable {
   final String currency; // e.g., 'LYD'
   final ThemeMode themeMode; // light / dark / system
+  final String? facebookPageAccessToken;
+  final String? facebookVerifyToken;
+  final String? facebookPageId;
 
   const SettingsState({
     required this.currency,
     this.themeMode = ThemeMode.light,
+    this.facebookPageAccessToken,
+    this.facebookVerifyToken,
+    this.facebookPageId,
   });
 
   // Locale fixed to Arabic (app is Arabic-only now)
   Locale get locale => const Locale('ar');
 
-  SettingsState copyWith({String? currency, ThemeMode? themeMode}) =>
+  SettingsState copyWith({
+    String? currency,
+    ThemeMode? themeMode,
+    String? facebookPageAccessToken,
+    String? facebookVerifyToken,
+    String? facebookPageId,
+  }) =>
       SettingsState(
         currency: currency ?? this.currency,
         themeMode: themeMode ?? this.themeMode,
+        facebookPageAccessToken:
+            facebookPageAccessToken ?? this.facebookPageAccessToken,
+        facebookVerifyToken: facebookVerifyToken ?? this.facebookVerifyToken,
+        facebookPageId: facebookPageId ?? this.facebookPageId,
       );
 
   @override
-  List<Object?> get props => [currency, themeMode];
+  List<Object?> get props => [
+        currency,
+        themeMode,
+        facebookPageAccessToken,
+        facebookVerifyToken,
+        facebookPageId
+      ];
 }
 
 class SettingsCubit extends Cubit<SettingsState> {
@@ -39,7 +61,16 @@ class SettingsCubit extends Cubit<SettingsState> {
       'system' => ThemeMode.system,
       _ => ThemeMode.light,
     };
-    emit(SettingsState(currency: cur, themeMode: mode));
+    final accessToken = await _repo.get('facebook_page_access_token');
+    final verifyToken = await _repo.get('facebook_verify_token');
+    final pageId = await _repo.get('facebook_page_id');
+    emit(SettingsState(
+      currency: cur,
+      themeMode: mode,
+      facebookPageAccessToken: accessToken,
+      facebookVerifyToken: verifyToken,
+      facebookPageId: pageId,
+    ));
   }
 
   Future<void> setCurrency(String currency) async {
@@ -56,5 +87,23 @@ class SettingsCubit extends Cubit<SettingsState> {
     });
     if (isClosed) return;
     emit(state.copyWith(themeMode: mode));
+  }
+
+  Future<void> setFacebookPageAccessToken(String? token) async {
+    await _repo.set('facebook_page_access_token', token);
+    if (isClosed) return;
+    emit(state.copyWith(facebookPageAccessToken: token));
+  }
+
+  Future<void> setFacebookVerifyToken(String? token) async {
+    await _repo.set('facebook_verify_token', token);
+    if (isClosed) return;
+    emit(state.copyWith(facebookVerifyToken: token));
+  }
+
+  Future<void> setFacebookPageId(String? id) async {
+    await _repo.set('facebook_page_id', id);
+    if (isClosed) return;
+    emit(state.copyWith(facebookPageId: id));
   }
 }

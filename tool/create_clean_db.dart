@@ -18,9 +18,13 @@ Future<void> main(List<String> args) async {
     f.deleteSync();
   }
 
-  final db = await dbFactory.openDatabase(dbPath, options: OpenDatabaseOptions(version: 1, onCreate: (db, version) async {
-    // Minimal schema without 'size' and 'color' columns
-    await db.execute('''
+  final db = await dbFactory.openDatabase(
+    dbPath,
+    options: OpenDatabaseOptions(
+      version: 1,
+      onCreate: (db, version) async {
+        // Minimal schema without 'size' and 'color' columns
+        await db.execute('''
       CREATE TABLE parent_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -29,7 +33,7 @@ Future<void> main(List<String> args) async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE product_variants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         parent_product_id INTEGER NOT NULL,
@@ -43,21 +47,21 @@ Future<void> main(List<String> args) async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE brands (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE attributes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE attribute_values (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         attribute_id INTEGER NOT NULL,
@@ -66,7 +70,7 @@ Future<void> main(List<String> args) async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE variant_attributes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         variant_id INTEGER NOT NULL,
@@ -76,7 +80,7 @@ Future<void> main(List<String> args) async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE product_variant_rfids (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         variant_id INTEGER NOT NULL,
@@ -84,8 +88,9 @@ Future<void> main(List<String> args) async {
         FOREIGN KEY(variant_id) REFERENCES product_variants(id)
       );
     ''');
-
-  }));
+      },
+    ),
+  );
 
   print('Created clean DB at: $dbPath');
   await db.close();

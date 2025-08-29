@@ -106,29 +106,27 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
           content: SizedBox(
             height: 260,
             width: 320,
-            child: CupertinoScrollbar(
-              child: ListView(
-                children: _permissions.map((p) {
-                  final pid = p['id'] as int;
-                  final code = p['code'] as String;
-                  final desc = (p['description'] as String?)?.trim();
-                  final display = (desc == null || desc.isEmpty) ? code : desc;
-                  final on = selected.contains(pid);
-                  return CupertinoListTile(
-                    title: Text(display, textDirection: TextDirection.rtl),
-                    trailing: CupertinoSwitch(
-                      value: on,
-                      onChanged: (v) => setInner(() {
-                        if (v) {
-                          selected.add(pid);
-                        } else {
-                          selected.remove(pid);
-                        }
-                      }),
-                    ),
-                  );
-                }).toList(),
-              ),
+            child: ListView(
+              children: _permissions.map((p) {
+                final pid = p['id'] as int;
+                final code = p['code'] as String;
+                final desc = (p['description'] as String?)?.trim();
+                final display = (desc == null || desc.isEmpty) ? code : desc;
+                final on = selected.contains(pid);
+                return _CupertinoRowTile(
+                  title: Text(display, textDirection: TextDirection.rtl),
+                  trailing: CupertinoSwitch(
+                    value: on,
+                    onChanged: (v) => setInner(() {
+                      if (v) {
+                        selected.add(pid);
+                      } else {
+                        selected.remove(pid);
+                      }
+                    }),
+                  ),
+                );
+              }).toList(),
             ),
           ),
           actions: [
@@ -285,7 +283,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                 itemCount: _roles.length,
                 itemBuilder: (ctx, i) {
                   final r = _roles[i];
-                  return CupertinoListTile(
+                  return _CupertinoRowTile(
                     title: Text(r['name'] as String? ?? ''),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -316,6 +314,31 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
                   );
                 },
               ),
+      ),
+    );
+  }
+}
+
+class _CupertinoRowTile extends StatelessWidget {
+  final Widget title;
+  final Widget? trailing;
+  const _CupertinoRowTile({required this.title, this.trailing});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: CupertinoColors.separator, width: 0.5),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Align(alignment: Alignment.centerRight, child: title),
+          ),
+          if (trailing != null) ...[const SizedBox(width: 12), trailing!],
+        ],
       ),
     );
   }

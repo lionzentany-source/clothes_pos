@@ -54,30 +54,6 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
     super.dispose();
   }
 
-  Future<void> _pickCategory() async {
-    await showCupertinoModalPopup(
-      context: context,
-      builder: (_) => CupertinoActionSheet(
-        title: const Text('اختر الفئة'),
-        actions: [
-          for (final c in _cats)
-            CupertinoActionSheetAction(
-              onPressed: () {
-                Navigator.of(context).pop();
-                setState(() => _category = c);
-              },
-              child: Text(c.name),
-            ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
-          isDefaultAction: true,
-          child: const Text('إلغاء'),
-        ),
-      ),
-    );
-  }
-
   Future<void> _pickDate() async {
     DateTime temp = _date;
     await showCupertinoModalPopup(
@@ -151,6 +127,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
             ? null
             : _descCtrl.text.trim(),
       );
+      if (!mounted) return;
       final userId = context.read<AuthCubit>().state.user?.id;
       if (exp.id == null) {
         await _repo.createExpense(exp, userId: userId);
@@ -213,7 +190,33 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
                 margin: EdgeInsets.only(bottom: 12),
               ),
             CupertinoButton(
-              onPressed: canEdit ? _pickCategory : null,
+              onPressed: canEdit
+                  ? () async {
+                      // استخدم نفس قائمة الفئات من شاشة التصفية
+                      final cats = _cats;
+                      await showCupertinoModalPopup(
+                        context: context,
+                        builder: (_) => CupertinoActionSheet(
+                          title: const Text('اختر الفئة'),
+                          actions: [
+                            for (final c in cats)
+                              CupertinoActionSheetAction(
+                                onPressed: () {
+                                  Navigator.of(context).pop();
+                                  setState(() => _category = c);
+                                },
+                                child: Text(c.name),
+                              ),
+                          ],
+                          cancelButton: CupertinoActionSheetAction(
+                            onPressed: () => Navigator.of(context).pop(),
+                            isDefaultAction: true,
+                            child: const Text('إلغاء'),
+                          ),
+                        ),
+                      );
+                    }
+                  : null,
               padding: EdgeInsets.zero,
               child: Align(
                 alignment: Alignment.centerRight,
@@ -275,7 +278,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
             const SizedBox(height: 12),
             CupertinoTextField(
               controller: _descCtrl,
-              placeholder: 'وصف (اختياري)',
+              placeholder: 'أدخل وصفًا تفصيليًا',
               enabled: canEdit,
               maxLines: 3,
               textDirection: TextDirection.rtl,

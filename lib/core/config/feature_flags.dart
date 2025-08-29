@@ -23,6 +23,12 @@ class FeatureFlags {
     return false;
   }
 
+  /// Backwards-compatible setter used in tests and existing code that assigns
+  /// `FeatureFlags.useDynamicAttributes = true;`.
+  static set useDynamicAttributes(bool value) {
+    _overrideValue = value;
+  }
+
   /// Set the flag for tests or runtime toggles. Call `clearOverride()` to
   /// revert to environment/default behavior.
   static void setForTests(bool value) => _overrideValue = value;

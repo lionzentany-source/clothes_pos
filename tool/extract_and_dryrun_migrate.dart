@@ -43,7 +43,11 @@ String normalizeValue(String columnName, String v) {
 Future<void> main(List<String> args) async {
   sqfliteFfiInit();
   String? dbArg;
-  for (final a in args) if (a.startsWith('--db=')) dbArg = a.split('=')[1];
+  for (final a in args) {
+    if (a.startsWith('--db=')) {
+      dbArg = a.split('=')[1];
+    }
+  }
   final dbPath = dbArg != null && dbArg.isNotEmpty
       ? dbArg
       : p.join(
@@ -85,8 +89,9 @@ Future<void> main(List<String> args) async {
             type == '' ||
             colName.toLowerCase().contains('description') ||
             colName.toLowerCase().contains('name') ||
-            colName.toLowerCase().contains('details')))
+            colName.toLowerCase().contains('details'))) {
           continue;
+        }
         final rows = await db.rawQuery(
           'SELECT $colName AS v, ROWID AS rid FROM $table LIMIT 1000',
         );
@@ -96,8 +101,8 @@ Future<void> main(List<String> args) async {
           final s = v;
           // JSON key patterns
           final jsonSize = RegExp(
-            r'"size"\s*:\s*"([^"]+)"',
-            caseSensitive: false,
+            r'"size"\s*:\s*"([^"]+)"'
+            , caseSensitive: false,
           ).firstMatch(s);
           if (jsonSize != null) {
             extractedSizes
@@ -105,8 +110,8 @@ Future<void> main(List<String> args) async {
                 .add(jsonSize.group(1)!.trim());
           }
           final jsonColor = RegExp(
-            r'"color"\s*:\s*"([^"]+)"',
-            caseSensitive: false,
+            r'"color"\s*:\s*"([^"]+)"'
+            , caseSensitive: false,
           ).firstMatch(s);
           if (jsonColor != null) {
             extractedColors
@@ -118,29 +123,33 @@ Future<void> main(List<String> args) async {
             r'\bsize\s*[:=]\s*([A-Za-z0-9\-\u0600-\u06FF\s]+)',
             caseSensitive: false,
           ).firstMatch(s);
-          if (kvSize != null)
+          if (kvSize != null) {
             extractedSizes
                 .putIfAbsent('$table.$colName', () => {})
                 .add(kvSize.group(1)!.trim());
+          }
           final kvColor = RegExp(
             r'\bcolor\s*[:=]\s*([A-Za-z0-9\-\u0600-\u06FF\s]+)',
             caseSensitive: false,
           ).firstMatch(s);
-          if (kvColor != null)
+          if (kvColor != null) {
             extractedColors
                 .putIfAbsent('$table.$colName', () => {})
                 .add(kvColor.group(1)!.trim());
+          }
           // Arabic keywords
           final arSize = RegExp(r'المقاس\s*[:\-]\s*([^,;\n]+)').firstMatch(s);
-          if (arSize != null)
+          if (arSize != null) {
             extractedSizes
                 .putIfAbsent('$table.$colName', () => {})
                 .add(arSize.group(1)!.trim());
+          }
           final arColor = RegExp(r'اللون\s*[:\-]\s*([^,;\n]+)').firstMatch(s);
-          if (arColor != null)
+          if (arColor != null) {
             extractedColors
                 .putIfAbsent('$table.$colName', () => {})
                 .add(arColor.group(1)!.trim());
+          }
           // slash-separated tokens
           final slashParts = s.split(RegExp(r'[\/|]'));
           if (slashParts.length >= 2) {
@@ -148,12 +157,13 @@ Future<void> main(List<String> args) async {
               final tkn = part.trim();
               if (tkn.length <= 4 &&
                   RegExp(
-                    r'^[A-Za-z0-9]+\$',
-                  ).hasMatch(tkn.substring(0, tkn.length)))
+                    r'^[A-Za-z0-9]+$',
+                  ).hasMatch(tkn.substring(0, tkn.length))) {
                 continue;
+              }
               // heuristics: if token matches known size words
               final low = tkn.toLowerCase();
-              if ([
+              if ([ 
                 's',
                 'm',
                 'l',
@@ -167,7 +177,7 @@ Future<void> main(List<String> args) async {
                 extractedSizes
                     .putIfAbsent('$table.$colName', () => {})
                     .add(tkn);
-              } else if ([
+              } else if ([ 
                 'red',
                 'blue',
                 'green',

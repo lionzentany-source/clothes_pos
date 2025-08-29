@@ -947,7 +947,7 @@ abstract class AppLocalizations {
   /// No description provided for @stockLowIndicator.
   ///
   /// In en, this message translates to:
-  /// **'SKU {sku}: {qty} — RP {rp}'**
+  /// **'SKU {sku}: {qty} - RP {rp}'**
   String stockLowIndicator(Object qty, Object rp, Object sku);
 
   /// No description provided for @datePickerSelect.
@@ -1417,6 +1417,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Test Printer'**
   String get testPrinter;
+
+  /// No description provided for @manageAttributesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Attributes'**
+  String get manageAttributesTitle;
+
+  /// No description provided for @attributeNoun.
+  ///
+  /// In en, this message translates to:
+  /// **'Attribute'**
+  String get attributeNoun;
+
+  /// No description provided for @noValuesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No values yet'**
+  String get noValuesYet;
+
+  /// No description provided for @valueNoun.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get valueNoun;
+
+  /// No description provided for @noAttributesLoaded.
+  ///
+  /// In en, this message translates to:
+  /// **'No attributes loaded'**
+  String get noAttributesLoaded;
+
+  /// No description provided for @addNewAttribute.
+  ///
+  /// In en, this message translates to:
+  /// **'Add attribute'**
+  String get addNewAttribute;
+
+  /// No description provided for @attributeNamePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Attribute name'**
+  String get attributeNamePlaceholder;
+
+  /// No description provided for @nameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required'**
+  String get nameRequired;
+
+  /// No description provided for @attributeExists.
+  ///
+  /// In en, this message translates to:
+  /// **'An attribute with that name already exists'**
+  String get attributeExists;
+
+  /// No description provided for @attributeAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Attribute added'**
+  String get attributeAdded;
+
+  /// No description provided for @editAttribute.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit attribute'**
+  String get editAttribute;
+
+  /// No description provided for @attributeSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Attribute saved'**
+  String get attributeSaved;
+
+  /// No description provided for @addNewValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Add value'**
+  String get addNewValue;
+
+  /// No description provided for @valuePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Value'**
+  String get valuePlaceholder;
+
+  /// No description provided for @valueRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Value is required'**
+  String get valueRequired;
+
+  /// No description provided for @valueAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Value added'**
+  String get valueAdded;
+
+  /// No description provided for @editValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit value'**
+  String get editValue;
+
+  /// No description provided for @valueSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Value saved'**
+  String get valueSaved;
+
+  /// No description provided for @confirmDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm delete'**
+  String get confirmDelete;
+
+  /// No description provided for @deleteAttributePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete attribute {name}?'**
+  String deleteAttributePrompt(Object name);
+
+  /// No description provided for @deleteValuePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete value {value}?'**
+  String deleteValuePrompt(Object value);
+
+  /// No description provided for @attributeDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Attribute deleted'**
+  String get attributeDeleted;
+
+  /// No description provided for @valueDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Value deleted'**
+  String get valueDeleted;
 }
 
 class _AppLocalizationsDelegate

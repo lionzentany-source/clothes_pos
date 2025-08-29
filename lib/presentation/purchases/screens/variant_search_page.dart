@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart' show Tooltip;
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
 import 'package:clothes_pos/data/repositories/category_repository.dart';
 import 'package:clothes_pos/data/models/category.dart';
 import 'package:clothes_pos/data/models/product_variant.dart';
+import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
 
 class VariantSearchPage extends StatefulWidget {
   const VariantSearchPage({super.key});
@@ -12,6 +14,23 @@ class VariantSearchPage extends StatefulWidget {
 }
 
 class _VariantSearchPageState extends State<VariantSearchPage> {
+  Future<String> getFullVariantName(ProductVariant v) async {
+    final sku = v.sku ?? '';
+    final size = v.size ?? '';
+    final color = v.color ?? '';
+    String parentName = '';
+    try {
+      final parent = await _repo.getParentById(v.parentProductId);
+      parentName = parent?.name ?? '';
+    } catch (_) {}
+    List<String> parts = [];
+    if (parentName.isNotEmpty) parts.add(parentName);
+    if (color.isNotEmpty) parts.add(color);
+    if (size.isNotEmpty) parts.add(size);
+    if (sku.isNotEmpty) parts.add('[$sku]');
+    return parts.join(' ');
+  }
+
   final _repo = sl<ProductRepository>();
   final _q = TextEditingController();
   List<Category> _cats = [];
@@ -19,6 +38,7 @@ class _VariantSearchPageState extends State<VariantSearchPage> {
 
   bool _loading = false;
   List<ProductVariant> _results = [];
+  final Map<int, String> _parentNamesCache = {};
 
   Future<void> _loadCats() async {
     _cats = await sl<CategoryRepository>().listAll(limit: 200);
@@ -33,6 +53,13 @@ class _VariantSearchPageState extends State<VariantSearchPage> {
         categoryId: _selectedCat,
         limit: 30,
       );
+      // Prefetch parent names for all variants
+      for (final v in _results) {
+        if (!_parentNamesCache.containsKey(v.parentProductId)) {
+          final parent = await _repo.getParentById(v.parentProductId);
+          _parentNamesCache[v.parentProductId] = parent?.name ?? '';
+        }
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -111,11 +138,29 @@ class _VariantSearchPageState extends State<VariantSearchPage> {
                             itemCount: _results.length,
                             itemBuilder: (context, i) {
                               final v = _results[i];
+                              final parentName =
+                                  _parentNamesCache[v.parentProductId] ?? '';
+                              final sku = v.sku ?? '';
+                              final size = v.size ?? '';
+                              final color = v.color ?? '';
+                              List<String> parts = [];
+                              if (parentName.isNotEmpty) parts.add(parentName);
+                              if (color.isNotEmpty) parts.add(color);
+                              if (size.isNotEmpty) parts.add(size);
+                              if (sku.isNotEmpty) parts.add('[$sku]');
+                              final fullName = parts.join(' ');
                               return CupertinoListTile(
-                                title: Text(v.sku ?? ''),
-                                subtitle: Text(
-                                  'ID ${v.id} — ${v.size ?? ''} ${v.color ?? ''}'
-                                      .trim(),
+                                title: Tooltip(
+                                  message: 'ID ${v.id}',
+                                  child: Text(fullName),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    VariantAttributesDisplay(
+                                      attributes: v.attributes,
+                                    ),
+                                  ],
                                 ),
                                 onTap: () => Navigator.of(
                                   context,
@@ -139,6 +184,17 @@ class _VariantSearchPageState extends State<VariantSearchPage> {
                           itemCount: _results.length,
                           itemBuilder: (context, i) {
                             final v = _results[i];
+                            final parentName =
+                                _parentNamesCache[v.parentProductId] ?? '';
+                            final sku = v.sku ?? '';
+                            final size = v.size ?? '';
+                            final color = v.color ?? '';
+                            List<String> parts = [];
+                            if (parentName.isNotEmpty) parts.add(parentName);
+                            if (color.isNotEmpty) parts.add(color);
+                            if (size.isNotEmpty) parts.add(size);
+                            if (sku.isNotEmpty) parts.add('[$sku]');
+                            final fullName = parts.join(' ');
                             return CupertinoButton(
                               padding: const EdgeInsets.all(12),
                               onPressed: () =>
@@ -148,22 +204,23 @@ class _VariantSearchPageState extends State<VariantSearchPage> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  Text(
-                                    v.sku ?? '',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
+                                  Tooltip(
+                                    message: 'ID ${v.id}',
+                                    child: Text(
+                                      fullName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    '${v.size ?? ''} ${v.color ?? ''}'.trim(),
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: CupertinoColors.secondaryLabel,
-                                    ),
+                                  VariantAttributesDisplay(
+                                    attributes: v.attributes,
                                   ),
+                                  const SizedBox(height: 4),
+                                  const SizedBox.shrink(),
                                 ],
                               ),
                             );

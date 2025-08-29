@@ -5,7 +5,11 @@ import 'package:path/path.dart' as p;
 Future<void> main(List<String> args) async {
   sqfliteFfiInit();
   String? dbArg;
-  for (final a in args) if (a.startsWith('--db=')) dbArg = a.split('=')[1];
+  for (final a in args) {
+    if (a.startsWith('--db=')) {
+      dbArg = a.split('=')[1];
+    }
+  }
   final dbPath = dbArg != null && dbArg.isNotEmpty
       ? dbArg
       : p.join(
@@ -28,7 +32,9 @@ Future<void> main(List<String> args) async {
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
     );
     print('\nFound ${tables.length} tables:');
-    for (final t in tables) print(" - ${t['name']}");
+    for (final t in tables) {
+      print(" - ${t['name']}");
+    }
 
     final suspects = <String>[];
 
@@ -44,7 +50,9 @@ Future<void> main(List<String> args) async {
     }
 
     print('\nSuspected columns (contain "size" or "color"):');
-    for (final s in suspects) print(' - $s');
+    for (final s in suspects) {
+      print(' - $s');
+    }
 
     if (suspects.isEmpty) {
       print('\nNo obvious columns found.');
@@ -66,7 +74,9 @@ Future<void> main(List<String> args) async {
         'SELECT DISTINCT $col AS v FROM $table WHERE $col IS NOT NULL AND TRIM($col) != "" LIMIT 20',
       );
       print('Sample distinct values (up to 20):');
-      for (final r in samples) print('  - ${r['v']}');
+      for (final r in samples) {
+        print('  - ${r['v']}');
+      }
     }
     // Always scan TEXT-like columns for JSON-like occurrences (to catch hidden storage)
     print(

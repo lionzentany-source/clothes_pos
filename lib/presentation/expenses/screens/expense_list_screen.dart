@@ -67,10 +67,25 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
         );
       }
       final data = buf.toString();
-      // Simple approach: show share sheet via Printing if available
-      // (If not added, ignore silently)
-      // ignore: avoid_print
-      // Placeholder: could integrate a file saver plugin.
+      // Convert to bytes if needed for file operations
+      // final bytes = utf8.encode(data);
+
+      // Save the file
+      // Note: This is a placeholder implementation - would need to integrate
+      // an actual file saving package like 'file_saver' or 'path_provider'
+      /*
+      final path = await FileSaver().saveFile(
+        name: 'expenses_${DateTime.now().toIso8601String()}.csv',
+        bytes: Uint8List.fromList(bytes),
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم الحفظ في: $path')),
+        );
+      }
+      */
+
+      // For now, keep the existing dialog approach
       await showCupertinoDialog(
         context: context,
         builder: (_) => CupertinoAlertDialog(
@@ -554,7 +569,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                         return CupertinoListTile(
                           title: Text(e.categoryName ?? ''),
                           subtitle: Text(
-                            '${e.amount.toStringAsFixed(2)} — ${e.paidVia == 'cash'
+                            '${e.amount.toStringAsFixed(2)} - ${e.paidVia == 'cash'
                                 ? 'نقد'
                                 : e.paidVia == 'bank'
                                 ? 'بنكي'
@@ -566,6 +581,11 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                               ? CupertinoButton(
                                   padding: EdgeInsets.zero,
                                   onPressed: () async {
+                                    final userId = context
+                                        .read<AuthCubit>()
+                                        .state
+                                        .user
+                                        ?.id;
                                     final ok = await showCupertinoDialog<bool>(
                                       context: context,
                                       builder: (_) => CupertinoAlertDialog(
@@ -589,17 +609,13 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                       ),
                                     );
                                     if (ok == true) {
-                                      final userId = context
-                                          .read<AuthCubit>()
-                                          .state
-                                          .user
-                                          ?.id;
                                       await _repo.deleteExpense(
                                         e.id!,
                                         userId: userId,
                                       );
-                                      if (!mounted) return;
-                                      _load();
+                                      if (mounted) {
+                                        _load();
+                                      }
                                     }
                                   },
                                   child: const Icon(

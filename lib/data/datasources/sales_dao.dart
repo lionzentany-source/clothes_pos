@@ -123,4 +123,48 @@ class SalesDao {
     );
     return rows;
   }
+
+  Future<List<Map<String, Object?>>> listSales({
+    int limit = 20,
+    int offset = 0,
+    String? searchQuery,
+  }) async {
+    final db = await _dbHelper.database;
+    String whereClause = '';
+    List<Object?> whereArgs = [];
+
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      final id = int.tryParse(searchQuery);
+      if (id != null) {
+        whereClause = 'WHERE s.id = ?';
+        whereArgs.add(id);
+      }
+    }
+
+    final rows = await db.rawQuery(
+      '''
+      SELECT
+        s.id,
+        s.total_amount,
+        s.sale_date,
+        u.full_name as user_name
+      FROM sales s
+      LEFT JOIN users u ON s.user_id = u.id
+      $whereClause
+      ORDER BY s.id DESC
+      LIMIT ? OFFSET ?
+    ''',
+      [...whereArgs, limit, offset],
+    );
+
+    return rows;
+  }
+
+  Future<List<Map<String, Object?>>> salesForCustomer(int customerId) async {
+    final db = await _dbHelper.database;
+    return db.rawQuery(
+      '''SELECT id, total_amount, sale_date FROM sales WHERE customer_id = ? ORDER BY sale_date DESC''',
+      [customerId],
+    );
+  }
 }

@@ -1,4 +1,6 @@
 import 'package:clothes_pos/data/datasources/product_dao.dart';
+import 'package:clothes_pos/data/repositories/attribute_repository.dart';
+import 'package:clothes_pos/data/models/attribute.dart';
 import 'package:clothes_pos/data/models/inventory_item_row.dart';
 import 'package:clothes_pos/data/models/parent_product.dart';
 import 'package:clothes_pos/data/models/product_variant.dart';
@@ -8,6 +10,8 @@ import 'package:clothes_pos/core/result/result.dart';
 
 class ProductRepository {
   final ProductDao dao;
+  // Optional attribute repository — injected when dynamic attributes feature is enabled
+  final AttributeRepository? attributeRepository;
   final _sizesCache = TtlCache<String, List<String>>(
     ttl: const Duration(minutes: 10),
   );
@@ -17,12 +21,22 @@ class ProductRepository {
   final _brandsCache = TtlCache<String, List<String>>(
     ttl: const Duration(minutes: 10),
   );
-  ProductRepository(this.dao);
+  ProductRepository(this.dao, [this.attributeRepository]);
 
   Future<int> createParent(ParentProduct p) => dao.insertParentProduct(p);
   Future<int> updateParent(ParentProduct p) => dao.updateParentProduct(p);
   Future<int> deleteParent(int id) => dao.deleteParentProduct(id);
   Future<ParentProduct?> getParentById(int id) => dao.getParentById(id);
+
+  /// Returns a map with keys 'parent' (ParentProduct) and 'attributes' (List<Attribute>)
+  Future<Map<String, Object?>> getParentWithAttributes(int id) async {
+    final m = await dao.getParentWithAttributes(id);
+    if (m.isEmpty) return {};
+    final parent = ParentProduct.fromMap(m['parent'] as Map<String, Object?>);
+    final attrsRaw = (m['attributes'] as List).cast<Map<String, Object?>>();
+    final attrs = attrsRaw.map((r) => Attribute.fromMap(r)).toList();
+    return {'parent': parent, 'attributes': attrs};
+  }
 
   Future<List<ParentProduct>> searchParentsByName(
     String q, {
@@ -55,10 +69,24 @@ class ProductRepository {
   Future<List<ProductVariant>> lowStock({int limit = 50, int offset = 0}) =>
       dao.getLowStockVariants(limit: limit, offset: offset);
 
-  Future<int> createWithVariants(ParentProduct p, List<ProductVariant> vs) =>
-      dao.createProductWithVariants(p, vs);
-  Future<void> updateWithVariants(ParentProduct p, List<ProductVariant> vs) =>
-      dao.updateProductAndVariants(p, vs);
+  Future<void> updateVariantSalePrice({
+    required int variantId,
+    required double salePrice,
+  }) async {
+    await dao.updateSalePrice(variantId: variantId, salePrice: salePrice);
+  }
+
+  Future<int> createWithVariants(
+    ParentProduct p,
+    List<ProductVariant> vs, [
+    List<Attribute>? parentAttributes,
+  ]) => dao.createProductWithVariants(p, vs, parentAttributes);
+
+  Future<void> updateWithVariants(
+    ParentProduct p,
+    List<ProductVariant> vs, [
+    List<Attribute>? parentAttributes,
+  ]) => dao.updateProductAndVariants(p, vs, parentAttributes);
 
   Future<List<String>> distinctSizes({int limit = 100}) async {
     final k = 'sizes:$limit';
@@ -194,7 +222,45 @@ class ProductRepository {
         'Item $id';
   }
 
+  /// Bulk get display names for variants
+  Future<Map<int, String>> getVariantDisplayNames(List<int> ids) async {
+    final result = <int, String>{};
+    if (ids.isEmpty) return result;
+    final rows = await dao.getVariantRowsByIds(ids);
+    for (final r in rows) {
+      final id = r['id'] as int;
+      final name =
+          (r['parent_name'] as String?) ??
+          (r['name'] as String?) ??
+          (r['sku'] as String?) ??
+          'Item $id';
+      result[id] = name;
+    }
+    return result;
+  }
+
   Future<List<String>> listRfidTags(int variantId) async {
     return dao.listRfidTags(variantId);
+  }
+
+  // --- Attribute helpers (delegates to AttributeRepository when available) ---
+  Future<List<Attribute>> getAllAttributes() async {
+    if (attributeRepository == null) return <Attribute>[];
+    return attributeRepository!.getAllAttributes();
+  }
+
+  Future<List<AttributeValue>> getAttributeValues(int attributeId) async {
+    if (attributeRepository == null) return <AttributeValue>[];
+    return attributeRepository!.getAttributeValues(attributeId);
+  }
+
+  Future<int> createAttribute(Attribute a) async {
+    if (attributeRepository == null) return Future.value(-1);
+    return attributeRepository!.createAttribute(a);
+  }
+
+  Future<int> createAttributeValue(AttributeValue v) async {
+    if (attributeRepository == null) return Future.value(-1);
+    return attributeRepository!.createAttributeValue(v);
   }
 }

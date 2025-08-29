@@ -8,6 +8,10 @@ import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/core/auth/permissions.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
 import 'package:clothes_pos/presentation/common/view_only_banner.dart';
+import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
+import 'package:clothes_pos/data/datasources/product_dao.dart';
+import 'package:clothes_pos/data/repositories/supplier_repository.dart';
+import 'package:clothes_pos/data/repositories/product_repository.dart';
 
 class PurchaseListScreen extends StatefulWidget {
   const PurchaseListScreen({super.key});
@@ -19,6 +23,7 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
   final _repo = sl<PurchaseRepository>();
   bool _loading = true;
   List<PurchaseInvoice> _invoices = [];
+  final Map<int, String> _supplierNames = {};
 
   @override
   void initState() {
@@ -30,6 +35,14 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
     setState(() => _loading = true);
     try {
       _invoices = await _repo.listInvoices(limit: 200);
+      // Prefetch supplier names
+      final supRepo = sl<SupplierRepository>();
+      // Collect supplier ids and batch fetch
+      final supIds = _invoices.map((i) => i.supplierId).toSet().toList();
+      final suppliers = await supRepo.getByIds(supIds);
+      for (final s in suppliers) {
+        if (s.id != null) _supplierNames[s.id!] = s.name;
+      }
       setState(() {});
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -68,9 +81,10 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
                   }
                   final index = canPurchase ? i : i - 1;
                   final inv = _invoices[index];
+                  final supName = _supplierNames[inv.supplierId] ?? '';
                   return CupertinoListTile(
                     title: Text(
-                      'المورد #${inv.supplierId} — ${inv.reference ?? ''}',
+                      '${supName.isNotEmpty ? supName : 'المورد'} - ${inv.reference ?? ''}',
                     ),
                     subtitle: Text(
                       inv.receivedDate.toString().split('T').first,
@@ -102,6 +116,9 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
   final _repo = sl<PurchaseRepository>();
   bool _loading = true;
   List<PurchaseInvoiceItem> _items = [];
+  final Map<int, List<dynamic>?> _variantAttributes = {};
+  String? _supplierName;
+  final Map<int, String> _variantDisplayNames = {};
 
   @override
   void initState() {
@@ -112,7 +129,36 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      // Synchronously load supplier name and all variant info before rendering
+      final supRepo = sl<SupplierRepository>();
+      final prodDao = sl<ProductDao>();
+      final prodRepo = sl<ProductRepository>();
+
       _items = await _repo.itemsForInvoice(widget.invoice.id!);
+
+      // Load supplier name
+      try {
+        final suppliers = await supRepo.getByIds([widget.invoice.supplierId]);
+        _supplierName = suppliers.isNotEmpty ? suppliers.first.name : null;
+      } catch (_) {
+        _supplierName = null;
+      }
+      // Batch fetch variant rows and attributes
+      final variantIds = _items.map((i) => i.variantId).toSet().toList();
+      final variantDisplayMap = await prodRepo.getVariantDisplayNames(
+        variantIds,
+      );
+      // Fetch attribute values for variants if using dynamic attributes
+      if (variantIds.isNotEmpty) {
+        final variants = await prodDao.getVariantsByIds(variantIds);
+        for (final v in variants) {
+          _variantAttributes[v.id!] = v.attributes;
+        }
+      }
+      for (final it in _items) {
+        _variantDisplayNames[it.variantId] =
+            variantDisplayMap[it.variantId] ?? 'Variant';
+      }
       setState(() {});
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -137,7 +183,7 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(12),
                 children: [
-                  Text('المورد: ${inv.supplierId}'),
+                  Text('المورد: ${_supplierName ?? widget.invoice.supplierId}'),
                   Text('المرجع: ${inv.reference ?? '-'}'),
                   Text(
                     'التاريخ: ${inv.receivedDate.toString().split('T').first}',
@@ -145,10 +191,14 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                   Text('الإجمالي: ${money(context, inv.totalCost)}'),
                   const SizedBox(height: 12),
                   const Text('العناصر'),
-                  for (final it in _items)
+                  for (final it in _items) ...[
                     Text(
-                      'Var ${it.variantId} — Qty ${it.quantity} — Cost ${money(context, it.costPrice)}',
+                      '${_variantDisplayNames[it.variantId] ?? 'Variant'} - Qty ${it.quantity} - Cost ${money(context, it.costPrice)}',
                     ),
+                    VariantAttributesDisplay(
+                      attributes: _variantAttributes[it.variantId],
+                    ),
+                  ],
                 ],
               ),
             ),

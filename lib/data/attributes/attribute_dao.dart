@@ -33,10 +33,22 @@ class AttributeDao {
       whereArgs: [attributeId, value],
     );
     if (rows.isNotEmpty) return rows.first['id'] as int;
-    return await db.insert('attribute_values', {
-      'attribute_id': attributeId,
-      'value': value,
-    });
+    try {
+      return await db.insert('attribute_values', {
+        'attribute_id': attributeId,
+        'value': value,
+      });
+    } catch (e) {
+      // In case of a UNIQUE constraint race, select the existing id
+      final existing = await db.query(
+        'attribute_values',
+        where: 'attribute_id = ? AND value = ?',
+        whereArgs: [attributeId, value],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) return existing.first['id'] as int;
+      rethrow;
+    }
   }
 
   Future<void> linkVariantAttribute(

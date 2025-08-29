@@ -2,15 +2,28 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:clothes_pos/core/format/currency_formatter.dart';
 import 'package:clothes_pos/core/di/locator.dart';
+import 'package:clothes_pos/data/datasources/product_dao.dart';
 import 'package:clothes_pos/data/datasources/sales_dao.dart';
-
 import 'package:clothes_pos/data/repositories/settings_repository.dart';
-
+import 'package:clothes_pos/core/config/feature_flags.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show rootBundle;
+
+// دالة لفحص وجود أحرف عربية في النص
+// دالة لفحص إذا كان النص عبارة عن أرقام فقط (أو يحتوي على أرقام ورموز)
+bool isNumeric(String text) {
+  // يدعم الأرقام العربية والهندية والرموز الرقمية
+  return RegExp(
+    r'^[\d\u0660-\u0669\u06F0-\u06F9\s\.,:؛-]+$',
+  ).hasMatch(text.trim());
+}
+
+bool isArabic(String text) {
+  return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
+}
 
 class ReceiptPdfService {
   final SalesDao _sales;
@@ -62,6 +75,26 @@ class ReceiptPdfService {
         }
       } catch (_) {}
     }
+
+    // Load Latin and symbols fallback fonts (if available)
+    pw.Font? latinFont;
+    pw.Font? symbolsFont;
+    try {
+      final data = await rootBundle.load(
+        'assets/db/fonts/sfpro/SFPRODISPLAYREGULAR.otf',
+      );
+      latinFont = pw.Font.ttf(data);
+    } catch (_) {}
+    // If you add a dedicated symbols/emoji font under assets, load it here similarly.
+    // try {
+    //   final data = await rootBundle.load('assets/fonts/NotoEmoji-Regular.ttf');
+    //   symbolsFont = pw.Font.ttf(data);
+    // } catch (_) {}
+    final fallbackFonts = <pw.Font>[
+      if (latinFont case final f?) f,
+      if (symbolsFont case final s?) s,
+    ];
+
     final storeName = await _settings.get('store_name') ?? 'Clothes POS';
     final storeAddress = await _settings.get('store_address') ?? '';
     final storePhone = await _settings.get('store_phone') ?? '';
@@ -107,7 +140,35 @@ class ReceiptPdfService {
 
     final sale = await _sales.getSale(saleId);
     final saleDate = sale.saleDate;
-    final itemRows = await _sales.itemRowsForSale(saleId);
+    var itemRows = await _sales.itemRowsForSale(saleId);
+    // If dynamic attributes are enabled, enrich item rows with attributes
+    if (FeatureFlags.useDynamicAttributes && itemRows.isNotEmpty) {
+      try {
+        final variantIds = <int>[];
+        for (final r in itemRows) {
+          final vid =
+              (r['variant_id'] as int?) ?? (r['variant_id'] as num?)?.toInt();
+          if (vid != null) variantIds.add(vid);
+        }
+        if (variantIds.isNotEmpty) {
+          final prodDao = sl<ProductDao>();
+          final variants = await prodDao.getVariantsByIds(
+            variantIds.toSet().toList(),
+          );
+          final mapById = {for (var v in variants) v.id!: v};
+          for (final row in itemRows) {
+            final vid =
+                (row['variant_id'] as int?) ??
+                (row['variant_id'] as num?)?.toInt();
+            if (vid != null && mapById.containsKey(vid)) {
+              row['attributes'] = mapById[vid]!.attributes ?? [];
+            }
+          }
+        }
+      } catch (_) {
+        // ignore enrichment failures - continue without attributes
+      }
+    }
     final payments = await _sales.paymentsForSale(saleId);
     final total = itemRows.fold<double>(
       0,
@@ -141,7 +202,11 @@ class ReceiptPdfService {
           return pw.Directionality(
             textDirection: textDirection,
             child: pw.DefaultTextStyle(
-              style: pw.TextStyle(fontSize: baseFont, font: arabicFont),
+              style: pw.TextStyle(
+                fontSize: baseFont,
+                font: arabicFont,
+                fontFallback: fallbackFonts,
+              ),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
@@ -159,6 +224,12 @@ class ReceiptPdfService {
                       style: pw.TextStyle(
                         fontSize: 12,
                         fontWeight: pw.FontWeight.bold,
+                        font:
+                            isArabic(storeName) &&
+                                arabicFont != null &&
+                                !isNumeric(storeName)
+                            ? arabicFont
+                            : null,
                       ),
                     ),
                   ),
@@ -166,14 +237,30 @@ class ReceiptPdfService {
                     pw.Center(
                       child: pw.Text(
                         slogan,
-                        style: const pw.TextStyle(fontSize: 8),
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          font:
+                              isArabic(slogan) &&
+                                  arabicFont != null &&
+                                  !isNumeric(slogan)
+                              ? arabicFont
+                              : null,
+                        ),
                       ),
                     ),
                   if (showAddress && storeAddress.isNotEmpty)
                     pw.Center(
                       child: pw.Text(
                         storeAddress,
-                        style: const pw.TextStyle(fontSize: 9),
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          font:
+                              isArabic(storeAddress) &&
+                                  arabicFont != null &&
+                                  !isNumeric(storeAddress)
+                              ? arabicFont
+                              : null,
+                        ),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
@@ -181,28 +268,66 @@ class ReceiptPdfService {
                     pw.Center(
                       child: pw.Text(
                         '${phoneLabel ?? 'Phone'}: $storePhone',
-                        style: const pw.TextStyle(fontSize: 9),
+                        style: pw.TextStyle(
+                          fontSize: 9,
+                          font:
+                              isArabic(storePhone) &&
+                                  arabicFont != null &&
+                                  !isNumeric(storePhone)
+                              ? arabicFont
+                              : null,
+                        ),
                       ),
                     ),
                   if (showTaxId && taxId.isNotEmpty)
                     pw.Center(
                       child: pw.Text(
                         'TAX: $taxId',
-                        style: const pw.TextStyle(fontSize: 8),
+                        style: pw.TextStyle(
+                          fontSize: 8,
+                          font:
+                              isArabic(taxId) &&
+                                  arabicFont != null &&
+                                  !isNumeric(taxId)
+                              ? arabicFont
+                              : null,
+                        ),
                       ),
                     ),
                   pw.SizedBox(height: 8),
                   pw.Text(
-                    '${saleReceiptLabel ?? 'Sale Receipt'} #$saleId — $dateStr',
+                    '${saleReceiptLabel ?? 'Sale Receipt'} #$saleId - $dateStr',
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
+                      font:
+                          isArabic(
+                                '${saleReceiptLabel ?? 'Sale Receipt'} #$saleId - $dateStr',
+                              ) &&
+                              arabicFont != null &&
+                              !isNumeric(
+                                '${saleReceiptLabel ?? 'Sale Receipt'} #$saleId - $dateStr',
+                              )
+                          ? arabicFont
+                          : null,
                     ),
                   ),
                   pw.SizedBox(height: 4),
                   pw.Text(
                     '${userLabel ?? 'User'}: ${cashierName ?? 'User #${sale.userId}'}',
-                    style: const pw.TextStyle(fontSize: 9),
+                    style: pw.TextStyle(
+                      fontSize: 9,
+                      font:
+                          isArabic(
+                                '${userLabel ?? 'User'}: ${cashierName ?? 'User #${sale.userId}'}',
+                              ) &&
+                              arabicFont != null &&
+                              !isNumeric(
+                                '${userLabel ?? 'User'}: ${cashierName ?? 'User #${sale.userId}'}',
+                              )
+                          ? arabicFont
+                          : null,
+                    ),
                   ),
                   pw.SizedBox(height: 6),
                   pw.Divider(),
@@ -232,15 +357,66 @@ class ReceiptPdfService {
                         base,
                         if (variantText.isNotEmpty) ' $variantText',
                       ].join().trim();
+                      // Extract attribute values if dynamic attributes are enabled
+                      List<String> _attrValues() {
+                        if (!FeatureFlags.useDynamicAttributes) return [];
+                        final rawAttrs = (it['attributes'] as List?) ?? [];
+                        return rawAttrs
+                            .map((a) {
+                              if (a == null) return '';
+                              if (a is String) return a;
+                              if (a is Map)
+                                return (a['value'] ?? '').toString();
+                              try {
+                                final dyn = a as dynamic;
+                                return (dyn.value ?? '').toString();
+                              } catch (_) {
+                                return a.toString();
+                              }
+                            })
+                            .where((s) => s.isNotEmpty)
+                            .toList();
+                      }
+
+                      final attrs = _attrValues();
+
                       return pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(vertical: 2),
                         child: pw.Row(
                           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                           children: [
                             pw.Expanded(
-                              child: pw.Text(
-                                '$displayName x$qty',
-                                style: const pw.TextStyle(fontSize: 9),
+                              child: pw.Column(
+                                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                                children: [
+                                  pw.Text(
+                                    '$displayName x$qty',
+                                    style: pw.TextStyle(
+                                      fontSize: 9,
+                                      font:
+                                          isArabic('$displayName x$qty') &&
+                                              arabicFont != null &&
+                                              !isNumeric('$displayName x$qty')
+                                          ? arabicFont
+                                          : null,
+                                    ),
+                                  ),
+                                  if (attrs.isNotEmpty) pw.SizedBox(height: 2),
+                                  if (attrs.isNotEmpty)
+                                    pw.Text(
+                                      attrs.join(' • '),
+                                      style: pw.TextStyle(
+                                        fontSize: 8,
+                                        color: PdfColors.grey700,
+                                        font:
+                                            (isArabic(attrs.join(' • ')) &&
+                                                arabicFont != null &&
+                                                !isNumeric(attrs.join(' • ')))
+                                            ? arabicFont
+                                            : null,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                             pw.Text(
@@ -249,7 +425,28 @@ class ReceiptPdfService {
                                 currency: currency,
                                 locale: locale,
                               ),
-                              style: const pw.TextStyle(fontSize: 9),
+                              style: pw.TextStyle(
+                                fontSize: 9,
+                                font:
+                                    isNumeric(
+                                      CurrencyFormatter.format(
+                                        lineTotal,
+                                        currency: currency,
+                                        locale: locale,
+                                      ),
+                                    )
+                                    ? null
+                                    : (isArabic(
+                                                CurrencyFormatter.format(
+                                                  lineTotal,
+                                                  currency: currency,
+                                                  locale: locale,
+                                                ),
+                                              ) &&
+                                              arabicFont != null
+                                          ? arabicFont
+                                          : null),
+                              ),
                             ),
                           ],
                         ),
@@ -265,6 +462,12 @@ class ReceiptPdfService {
                         style: pw.TextStyle(
                           fontSize: 11,
                           fontWeight: pw.FontWeight.bold,
+                          font:
+                              isArabic(totalLabel ?? 'Total') &&
+                                  arabicFont != null &&
+                                  !isNumeric(totalLabel ?? 'Total')
+                              ? arabicFont
+                              : null,
                         ),
                       ),
                       pw.Text(
@@ -276,6 +479,25 @@ class ReceiptPdfService {
                         style: pw.TextStyle(
                           fontSize: 11,
                           fontWeight: pw.FontWeight.bold,
+                          font:
+                              isNumeric(
+                                CurrencyFormatter.format(
+                                  total,
+                                  currency: currency,
+                                  locale: locale,
+                                ),
+                              )
+                              ? null
+                              : (isArabic(
+                                          CurrencyFormatter.format(
+                                            total,
+                                            currency: currency,
+                                            locale: locale,
+                                          ),
+                                        ) &&
+                                        arabicFont != null
+                                    ? arabicFont
+                                    : null),
                         ),
                       ),
                     ],
@@ -286,6 +508,16 @@ class ReceiptPdfService {
                     style: pw.TextStyle(
                       fontSize: 10,
                       fontWeight: pw.FontWeight.bold,
+                      font:
+                          isArabic(
+                                '${paymentMethodsLabel ?? 'Payment Methods'}:',
+                              ) &&
+                              arabicFont != null &&
+                              !isNumeric(
+                                '${paymentMethodsLabel ?? 'Payment Methods'}:',
+                              )
+                          ? arabicFont
+                          : null,
                     ),
                   ),
                   ...payments.map(
@@ -294,7 +526,23 @@ class ReceiptPdfService {
                       children: [
                         pw.Text(
                           methodLabel(p.method.toString().split('.').last),
-                          style: const pw.TextStyle(fontSize: 9),
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            font:
+                                isArabic(
+                                      methodLabel(
+                                        p.method.toString().split('.').last,
+                                      ),
+                                    ) &&
+                                    arabicFont != null &&
+                                    !isNumeric(
+                                      methodLabel(
+                                        p.method.toString().split('.').last,
+                                      ),
+                                    )
+                                ? arabicFont
+                                : null,
+                          ),
                         ),
                         pw.Text(
                           CurrencyFormatter.format(
@@ -302,7 +550,28 @@ class ReceiptPdfService {
                             currency: currency,
                             locale: locale,
                           ),
-                          style: const pw.TextStyle(fontSize: 9),
+                          style: pw.TextStyle(
+                            fontSize: 9,
+                            font:
+                                isNumeric(
+                                  CurrencyFormatter.format(
+                                    p.amount,
+                                    currency: currency,
+                                    locale: locale,
+                                  ),
+                                )
+                                ? null
+                                : (isArabic(
+                                            CurrencyFormatter.format(
+                                              p.amount,
+                                              currency: currency,
+                                              locale: locale,
+                                            ),
+                                          ) &&
+                                          arabicFont != null
+                                      ? arabicFont
+                                      : null),
+                          ),
                         ),
                       ],
                     ),
@@ -313,7 +582,27 @@ class ReceiptPdfService {
                       (customThanks != null && customThanks.trim().isNotEmpty)
                           ? customThanks.trim()
                           : (thanksLabel ?? 'Thank you for shopping!'),
-                      style: const pw.TextStyle(fontSize: 9),
+                      style: pw.TextStyle(
+                        fontSize: 9,
+                        font:
+                            isArabic(
+                                  (customThanks != null &&
+                                          customThanks.trim().isNotEmpty)
+                                      ? customThanks.trim()
+                                      : (thanksLabel ??
+                                            'Thank you for shopping!'),
+                                ) &&
+                                arabicFont != null &&
+                                !isNumeric(
+                                  (customThanks != null &&
+                                          customThanks.trim().isNotEmpty)
+                                      ? customThanks.trim()
+                                      : (thanksLabel ??
+                                            'Thank you for shopping!'),
+                                )
+                            ? arabicFont
+                            : null,
+                      ),
                     ),
                   ),
                 ],
@@ -359,6 +648,26 @@ class ReceiptPdfService {
         }
       } catch (_) {}
     }
+
+    // Load Latin and symbols fallback fonts (if available)
+    pw.Font? latinFont;
+    pw.Font? symbolsFont;
+    try {
+      final data = await rootBundle.load(
+        'assets/db/fonts/sfpro/SFPRODISPLAYREGULAR.otf',
+      );
+      latinFont = pw.Font.ttf(data);
+    } catch (_) {}
+    // If you add a dedicated symbols/emoji font under assets, load it here similarly.
+    // try {
+    //   final data = await rootBundle.load('assets/fonts/NotoEmoji-Regular.ttf');
+    //   symbolsFont = pw.Font.ttf(data);
+    // } catch (_) {}
+    final fallbackFonts = <pw.Font>[
+      if (latinFont case final f?) f,
+      if (symbolsFont case final s?) s,
+    ];
+
     final storeName = await _settings.get('store_name') ?? 'Clothes POS';
     final storeAddress = await _settings.get('store_address') ?? '';
     final storePhone = await _settings.get('store_phone') ?? '';
@@ -399,7 +708,11 @@ class ReceiptPdfService {
         build: (_) => pw.Directionality(
           textDirection: textDirection,
           child: pw.DefaultTextStyle(
-            style: pw.TextStyle(fontSize: baseFont, font: arabicFont),
+            style: pw.TextStyle(
+              fontSize: baseFont,
+              font: arabicFont,
+              fontFallback: fallbackFonts,
+            ),
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
@@ -444,7 +757,7 @@ class ReceiptPdfService {
                     ),
                   ),
                 pw.SizedBox(height: 8),
-                pw.Text('TEST RECEIPT — Preview Layout'),
+                pw.Text('TEST RECEIPT - Preview Layout'),
                 pw.Divider(),
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,

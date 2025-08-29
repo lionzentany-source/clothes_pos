@@ -11,4 +11,7 @@ class SupplierRepository {
       dao.listAll(limit: limit, offset: offset);
   Future<int> create(String name, {String? contactInfo}) =>
       dao.insert(name, contactInfo: contactInfo);
+  Future<Supplier?> getById(int id) => dao.getById(id);
+
+  Future<List<Supplier>> getByIds(List<int> ids) => dao.getByIds(ids);
 }

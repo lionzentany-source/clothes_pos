@@ -6,9 +6,13 @@ Future<void> main() async {
   final dbFactory = databaseFactoryFfi;
   final dbPath = File('backups/clothes_pos_clean.db').absolute.path;
   // Ensure DB exists (create minimal schema if missing)
-  final db = await dbFactory.openDatabase(dbPath, options: OpenDatabaseOptions(version: 1, onCreate: (db, version) async {
-    // Reuse minimal schema from create_clean_db
-    await db.execute('''
+  final db = await dbFactory.openDatabase(
+    dbPath,
+    options: OpenDatabaseOptions(
+      version: 1,
+      onCreate: (db, version) async {
+        // Reuse minimal schema from create_clean_db
+        await db.execute('''
       CREATE TABLE parent_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
@@ -17,7 +21,7 @@ Future<void> main() async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE product_variants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         parent_product_id INTEGER NOT NULL,
@@ -31,21 +35,21 @@ Future<void> main() async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE brands (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE attributes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE attribute_values (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         attribute_id INTEGER NOT NULL,
@@ -54,7 +58,7 @@ Future<void> main() async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE variant_attributes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         variant_id INTEGER NOT NULL,
@@ -64,7 +68,7 @@ Future<void> main() async {
       );
     ''');
 
-    await db.execute('''
+        await db.execute('''
       CREATE TABLE product_variant_rfids (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         variant_id INTEGER NOT NULL,
@@ -72,7 +76,9 @@ Future<void> main() async {
         FOREIGN KEY(variant_id) REFERENCES product_variants(id)
       );
     ''');
-  }));
+      },
+    ),
+  );
 
   // Insert a brand
   final brandId = await db.insert('brands', {'name': 'Acme Apparel'});
@@ -110,20 +116,46 @@ Future<void> main() async {
   final colorAttrId = await db.insert('attributes', {'name': 'Color'});
 
   // Insert attribute values
-  final sizeMId = await db.insert('attribute_values', {'attribute_id': sizeAttrId, 'value': 'M'});
-  final sizeLId = await db.insert('attribute_values', {'attribute_id': sizeAttrId, 'value': 'L'});
-  final colorRedId = await db.insert('attribute_values', {'attribute_id': colorAttrId, 'value': 'Red'});
-  final colorBlueId = await db.insert('attribute_values', {'attribute_id': colorAttrId, 'value': 'Blue'});
+  final sizeMId = await db.insert('attribute_values', {
+    'attribute_id': sizeAttrId,
+    'value': 'M',
+  });
+  final sizeLId = await db.insert('attribute_values', {
+    'attribute_id': sizeAttrId,
+    'value': 'L',
+  });
+  final colorRedId = await db.insert('attribute_values', {
+    'attribute_id': colorAttrId,
+    'value': 'Red',
+  });
+  final colorBlueId = await db.insert('attribute_values', {
+    'attribute_id': colorAttrId,
+    'value': 'Blue',
+  });
 
   // Link variant attributes
-  await db.insert('variant_attributes', {'variant_id': variant1Id, 'attribute_value_id': sizeMId});
-  await db.insert('variant_attributes', {'variant_id': variant1Id, 'attribute_value_id': colorRedId});
+  await db.insert('variant_attributes', {
+    'variant_id': variant1Id,
+    'attribute_value_id': sizeMId,
+  });
+  await db.insert('variant_attributes', {
+    'variant_id': variant1Id,
+    'attribute_value_id': colorRedId,
+  });
 
-  await db.insert('variant_attributes', {'variant_id': variant2Id, 'attribute_value_id': sizeLId});
-  await db.insert('variant_attributes', {'variant_id': variant2Id, 'attribute_value_id': colorBlueId});
+  await db.insert('variant_attributes', {
+    'variant_id': variant2Id,
+    'attribute_value_id': sizeLId,
+  });
+  await db.insert('variant_attributes', {
+    'variant_id': variant2Id,
+    'attribute_value_id': colorBlueId,
+  });
 
   print('Seeded clean DB at: $dbPath');
-  print('brandId: $brandId parentId: $parentId variants: $variant1Id, $variant2Id');
+  print(
+    'brandId: $brandId parentId: $parentId variants: $variant1Id, $variant2Id',
+  );
 
   await db.close();
 }

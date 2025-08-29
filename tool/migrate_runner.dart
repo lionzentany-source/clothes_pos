@@ -23,7 +23,11 @@ Future<void> main(List<String> args) async {
 
   sqfliteFfiInit();
   String? dbArg;
-  for (final a in args) if (a.startsWith('--db=')) dbArg = a.split('=')[1];
+  for (final a in args) {
+    if (a.startsWith('--db=')) {
+      dbArg = a.split('=')[1];
+    }
+  }
   final dbPath = dbArg != null && dbArg.isNotEmpty
       ? dbArg
       : p.join(
@@ -268,11 +272,12 @@ Future<void> _linkVariantAttributes(
           print(
             '[migrate_runner] would link variant $variantId -> attribute_value $valueId (size)',
           );
-          if (!dryRun)
+          if (!dryRun) {
             await db.insert('variant_attributes', {
               'variant_id': variantId,
               'attribute_value_id': valueId,
             });
+          }
         }
       } else {
         print(
@@ -298,11 +303,12 @@ Future<void> _linkVariantAttributes(
           print(
             '[migrate_runner] would link variant $variantId -> attribute_value $valueId (color)',
           );
-          if (!dryRun)
+          if (!dryRun) {
             await db.insert('variant_attributes', {
               'variant_id': variantId,
               'attribute_value_id': valueId,
             });
+          }
         }
       } else {
         print(

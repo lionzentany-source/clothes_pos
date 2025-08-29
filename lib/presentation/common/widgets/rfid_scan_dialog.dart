@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:clothes_pos/data/repositories/settings_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/core/di/locator.dart';
@@ -7,6 +8,28 @@ import 'package:clothes_pos/core/hardware/uhf/uhf_reader_bridge.dart';
 
 /// Presents a live scanning dialog and returns the distinct EPC list when closed.
 Future<List<String>?> showRfidScanDialog(BuildContext context) async {
+  // Check RFID toggle from settings
+  final enabled = await sl<SettingsRepository>().get('rfid_enabled');
+  if (enabled != '1' && enabled != 'true') {
+    // Show message if RFID is disabled
+    if (!context.mounted) return null;
+    await showCupertinoDialog<void>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text('قارئ RFID غير مفعل'),
+        content: Text('يرجى تفعيل قارئ RFID من الإعدادات أولاً'),
+        actions: [
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            child: Text(AppLocalizations.of(ctx).ok),
+            onPressed: () => Navigator.of(ctx).pop(),
+          ),
+        ],
+      ),
+    );
+    return null;
+  }
+  if (!context.mounted) return null;
   return showCupertinoDialog<List<String>>(
     context: context,
     barrierDismissible: true,

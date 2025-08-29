@@ -21,11 +21,17 @@ Future<void> main() async {
       'SELECT variant_id, attribute_value_id FROM variant_attributes',
     );
     print('attributes (${attrs.length}):');
-    for (final r in attrs) print(r);
+    for (final r in attrs) {
+      print(r);
+    }
     print('\nattribute_values (${values.length}):');
-    for (final r in values) print(r);
+    for (final r in values) {
+      print(r);
+    }
     print('\nvariant_attributes (${links.length}):');
-    for (final r in links) print(r);
+    for (final r in links) {
+      print(r);
+    }
   } finally {
     await db.close();
   }

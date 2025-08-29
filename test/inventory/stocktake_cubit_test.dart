@@ -8,7 +8,7 @@ void main() {
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    await setupLocator();
+    await setupLocator(registerAggregatedReports: false);
   });
 
   test('markCountedByVariant accumulates and recomputes counters', () {

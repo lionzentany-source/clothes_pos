@@ -17,14 +17,17 @@ Future<void> main(List<String> args) async {
   final db = await dbFactory.openDatabase(resolvedPath);
 
   try {
-    final rows = await db.rawQuery('''
+    final rows = await db.rawQuery(
+      '''
       SELECT va.variant_id AS variant_id, a.name AS attribute, av.value AS value
       FROM variant_attributes va
       JOIN attribute_values av ON va.attribute_value_id = av.id
       JOIN attributes a ON av.attribute_id = a.id
       WHERE va.variant_id = ?
       ORDER BY a.name ASC
-    ''', [variantId]);
+    ''',
+      [variantId],
+    );
 
     if (rows.isEmpty) {
       print('No attributes linked to variant $variantId');
@@ -37,7 +40,9 @@ Future<void> main(List<String> args) async {
   } catch (e) {
     print('Query failed: $e');
     print('Listing tables in DB for diagnostics:');
-    final tables = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name");
+    final tables = await db.rawQuery(
+      "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+    );
     for (final t in tables) {
       print('- ${t['name']}');
     }

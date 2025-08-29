@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // path not required here
-import '../lib/data/attributes/attribute_repository.dart';
-import '../lib/data/attributes/attribute_dao.dart';
+import 'package:clothes_pos/data/attributes/attribute_repository.dart';
+import 'package:clothes_pos/data/attributes/attribute_dao.dart';
 
 Future<void> main(List<String> args) async {
   sqfliteFfiInit();

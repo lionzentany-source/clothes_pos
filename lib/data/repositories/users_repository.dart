@@ -5,7 +5,8 @@ class UsersRepository {
   final UsersDao dao;
   UsersRepository(this.dao);
 
-  Future<List<AppUser>> listAllUsers() => dao.listAllUsers();
+  Future<List<AppUser>> listAllUsers({int limit = 100}) =>
+      dao.listAllUsers(limit: limit);
   Future<int> createUser({
     required String username,
     String? fullName,
@@ -26,7 +27,8 @@ class UsersRepository {
   Future<void> deactivateUser(int id) => dao.deactivateUser(id);
   Future<void> changePassword(int userId, String newPassword) =>
       dao.changePassword(userId, newPassword);
-  Future<List<Map<String, Object?>>> listRoles() => dao.listRoles();
+  Future<List<Map<String, Object?>>> listRoles({int limit = 50}) =>
+      dao.listRoles(limit: limit);
   Future<List<int>> getUserRoleIds(int userId) => dao.getUserRoleIds(userId);
   Future<void> setUserRoles(int userId, List<int> roleIds) =>
       dao.setUserRoles(userId, roleIds);
