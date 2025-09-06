@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-commit hook template: prevent committing binary sqlite DB files (*.db)
+# Install by copying this file to .git/hooks/pre-commit (installer provided)
+
+if git rev-parse --verify --quiet MERGE_HEAD >/dev/null 2>&1; then
+  # during merges let hooks pass
+  exit 0
+fi
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
+for f in $STAGED_FILES; do
+  case "$f" in
+    *.db)
+      echo "Error: attempting to commit a .db file: $f"
+      echo "This repository stores canonical DBs under backups/ and ignores backups/*.db."
+      exit 1
+      ;;
+  esac
+done
+
+exit 0

@@ -1,0 +1,6 @@
+arb-dir: lib/l10n_clean
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+untranslated-messages-file: l10n_untranslated.txt
+nullable-getter: false
+output-dir: lib/l10n_clean

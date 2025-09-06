@@ -1,0 +1,23 @@
+{
+  "ar": [
+    "editLine",
+    "discountAmount",
+    "taxAmount",
+    "noteLabel",
+    "exact",
+    "searchProductPlaceholder",
+    "sizeLabel",
+    "colorLabel",
+    "skuLabel",
+    "barcodeLabel",
+    "stocktakeTitle",
+    "countedUnitsLabel",
+    "uncountedUnitsLabel",
+    "countedCostLabel",
+    "countedProfitLabel",
+    "startRfid",
+    "stopReading",
+    "addByBarcode",
+    "categories"
+  ]
+}

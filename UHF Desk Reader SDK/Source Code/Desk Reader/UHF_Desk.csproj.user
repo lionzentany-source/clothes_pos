@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup />
+  <ItemGroup>
+    <ApplicationDefinition Update="App.xaml">
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Update="Views\ContinuousWriteDialog.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\MessageDialog.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\SetUpView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\ReadWriteView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\InquiryView.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Views\UpdateEpcDialog.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Update="Assets\Languages\zh-cn.xaml">
+      <SubType>Designer</SubType>
+    </Resource>
+    <Resource Update="Assets\Languages\en-us.xaml">
+      <SubType>Designer</SubType>
+    </Resource>
+    <Page Update="Assets\Styles\BaseResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\ButtonResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\ComboBoxResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\DataGridResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\ExpanderResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\RadioButtonResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\TabControlResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Assets\Styles\TextBoxResources.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\ContinuousWriteDialog.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\MessageDialog.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\SetUpView.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\ReadWriteView.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\InquiryView.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\MainWindow.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Update="Views\UpdateEpcDialog.xaml">
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+</Project>

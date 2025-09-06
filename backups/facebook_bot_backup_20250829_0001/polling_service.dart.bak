@@ -1,0 +1,36 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import 'facebook_api_service.dart';
+import '../../data/models/facebook_message.dart';
+
+/// Lightweight PollingService that orchestrates FacebookApiService polling and
+/// exposes hooks for higher-level code (like an AiService or AssistantExecutor)
+class PollingService {
+  final FacebookApiService _facebookApiService;
+  PollingService(this._facebookApiService);
+
+  void start({required void Function(List<FacebookMessage>) onNewMessages}) {
+    // Use facebookApiService's built-in startPolling for simplicity.
+    _facebookApiService.startPolling((msgs) {
+      if (msgs.isEmpty) return;
+      try {
+        onNewMessages(msgs);
+      } catch (e, st) {
+        if (kDebugMode) {
+          print('PollingService:onNewMessages handler failed: $e\n$st');
+        }
+      }
+    });
+  }
+
+  void stop() {
+    _facebookApiService.stopPolling();
+  }
+
+  /// Convenience to trigger an immediate fetch (non-periodic)
+  Future<List<FacebookMessage>> fetchOnce() async {
+    return _facebook_api_service.fetchNewMessagesSinceLastCheck();
+  }
+}

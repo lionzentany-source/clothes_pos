@@ -1,0 +1,68 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net6.0-windows</TargetFramework>
+		<Nullable>enable</Nullable>
+		<UseWPF>true</UseWPF>
+		<PlatformTarget>x86</PlatformTarget>
+		<ProductName>Desk Reader</ProductName>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<ApplicationIcon>Assets\Images\logo.ico</ApplicationIcon>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Assets\Fonts\iconfont.ttf" />
+	  <None Remove="Assets\Images\logo.ico" />
+	  <None Remove="Assets\Images\logo.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Page Remove="Assets\Languages\en-us.xaml" />
+	  <Page Remove="Assets\Languages\zh-cn.xaml" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Content Include="Assets\Images\logo.ico" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <PackageReference Include="CommonServiceLocator" Version="2.0.7" />
+	  <PackageReference Include="log4net" Version="2.0.15" />
+	  <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39" />
+	  <PackageReference Include="MvvmLightLibs" Version="5.4.1.1" />
+	  <PackageReference Include="System.IO.Ports" Version="7.0.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="UHF_Reader_API">
+	    <HintPath>bin\Debug\UHF_Reader_API.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Resource Include="Assets\Fonts\iconfont.ttf" />
+	  <Resource Include="Assets\Images\logo.ico">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Assets\Images\logo.png">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Assets\Languages\en-us.xaml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Resource>
+	  <Resource Include="Assets\Languages\zh-cn.xaml">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </Resource>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="App.config">
+	    <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+	  </None>
+	  <None Update="log4net.config">
+	    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+	  </None>
+	</ItemGroup>
+
+</Project>

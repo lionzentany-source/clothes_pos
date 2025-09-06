@@ -1,0 +1,14 @@
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\Bridge32.GeneratedMSBuildEditorConfig.editorconfig
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\Bridge32.AssemblyInfoInputs.cache
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\Bridge32.AssemblyInfo.cs
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\Bridge32.csproj.CoreCompileInputs.cache
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\bin\Release\net6.0\bridge32_helper.exe
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\bin\Release\net6.0\bridge32_helper.deps.json
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\bin\Release\net6.0\bridge32_helper.runtimeconfig.json
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\bin\Release\net6.0\bridge32_helper.dll
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\bin\Release\net6.0\bridge32_helper.pdb
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\bridge32_helper.dll
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\refint\bridge32_helper.dll
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\bridge32_helper.pdb
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\Bridge32.genruntimeconfig.cache
+C:\develpment\flutter\applaction\clothes_pos\bridge32_helper\obj\Release\net6.0\ref\bridge32_helper.dll

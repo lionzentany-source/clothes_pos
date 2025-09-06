@@ -1,0 +1,25 @@
+import 'dart:convert';
+import 'dart:io';
+
+Map<String, Map<String, String>> loadNormalizationMap(String path) {
+  final f = File(path);
+  if (!f.existsSync()) return {};
+  final decoded = jsonDecode(f.readAsStringSync()) as Map<String, dynamic>;
+  return decoded.map((k, v) => MapEntry(k, Map<String, String>.from(v)));
+}
+
+String normalize(String attribute, String raw, Map<String, Map<String, String>> map) {
+  final key = attribute.toLowerCase();
+  final nm = raw.trim();
+  final lower = nm.toLowerCase();
+  final table = map[key + 's'] ?? {};
+  if (table.containsKey(lower)) return table[lower]!;
+  if (attribute.toLowerCase() == 'size') {
+    final numNorm = lower.replaceAll(RegExp(r"\.0+\$"), '');
+    return numNorm.toUpperCase();
+  }
+  if (attribute.toLowerCase() == 'color') {
+    return nm[0].toUpperCase() + (nm.length > 1 ? nm.substring(1) : '');
+  }
+  return nm;
+}
