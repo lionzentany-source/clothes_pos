@@ -2,9 +2,12 @@
 
 All notable changes will be documented in this file.
 
-## [1.0.1+3] - Unreleased
+## [1.0.2+4] - Unreleased
 
-- Bump version for next development cycle.
+- (placeholder) Add upcoming changes here.
+
+## [1.0.1+3] - 2025-09-06
+
 - Add README badges and dynamic attributes documentation.
 - Prepare CHANGELOG infrastructure.
 

@@ -67,8 +67,9 @@ class _AttributePickerState extends State<AttributePicker> {
   }
 
   Future<void> _ensureValues(int attributeId) async {
-    if (_values.containsKey(attributeId) || _loadingAttr[attributeId] == true)
+    if (_values.containsKey(attributeId) || _loadingAttr[attributeId] == true) {
       return;
+    }
     _loadingAttr[attributeId] = true;
     try {
       final raw = await widget.loadAttributeValues(attributeId);
@@ -318,47 +319,50 @@ class _AttributePickerState extends State<AttributePicker> {
             separatorBuilder: (_, __) => const SizedBox(width: 6),
             itemBuilder: (ctx, i) {
               final v = _selected[i];
-              return Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  GestureDetector(
-                    key: ValueKey('sel-left-${v.id}') as Key?,
-                    onTap: i > 0
-                        ? () => setState(() {
-                            final tmp = _selected[i - 1];
-                            _selected[i - 1] = _selected[i];
-                            _selected[i] = tmp;
-                          })
-                        : null,
-                    child: Icon(
-                      CupertinoIcons.chevron_back,
-                      size: 18,
-                      color: i > 0
-                          ? CupertinoColors.activeBlue
-                          : CupertinoColors.inactiveGray,
+              return Container(
+                key: v.id != null ? ValueKey('sel-fallback-${v.id}') : null,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      key: ValueKey('sel-left-${v.id}') as Key?,
+                      onTap: i > 0
+                          ? () => setState(() {
+                              final tmp = _selected[i - 1];
+                              _selected[i - 1] = _selected[i];
+                              _selected[i] = tmp;
+                            })
+                          : null,
+                      child: Icon(
+                        CupertinoIcons.chevron_back,
+                        size: 18,
+                        color: i > 0
+                            ? CupertinoColors.activeBlue
+                            : CupertinoColors.inactiveGray,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 2),
-                  _buildSelectedChip(v, key: ValueKey('sel-chip-${v.id}')),
-                  const SizedBox(width: 2),
-                  GestureDetector(
-                    key: ValueKey('sel-right-${v.id}') as Key?,
-                    onTap: i < _selected.length - 1
-                        ? () => setState(() {
-                            final tmp = _selected[i + 1];
-                            _selected[i + 1] = _selected[i];
-                            _selected[i] = tmp;
-                          })
-                        : null,
-                    child: Icon(
-                      CupertinoIcons.chevron_forward,
-                      size: 18,
-                      color: i < _selected.length - 1
-                          ? CupertinoColors.activeBlue
-                          : CupertinoColors.inactiveGray,
+                    const SizedBox(width: 2),
+                    _buildSelectedChip(v, key: ValueKey('sel-chip-${v.id}')),
+                    const SizedBox(width: 2),
+                    GestureDetector(
+                      key: ValueKey('sel-right-${v.id}') as Key?,
+                      onTap: i < _selected.length - 1
+                          ? () => setState(() {
+                              final tmp = _selected[i + 1];
+                              _selected[i + 1] = _selected[i];
+                              _selected[i] = tmp;
+                            })
+                          : null,
+                      child: Icon(
+                        CupertinoIcons.chevron_forward,
+                        size: 18,
+                        color: i < _selected.length - 1
+                            ? CupertinoColors.activeBlue
+                            : CupertinoColors.inactiveGray,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           ),
