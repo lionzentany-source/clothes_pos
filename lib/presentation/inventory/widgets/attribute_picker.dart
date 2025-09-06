@@ -26,9 +26,12 @@ class AttributePicker extends StatefulWidget {
 class _AttributePickerState extends State<AttributePicker> {
   List<Attribute> _attributes = [];
   final Map<int, List<AttributeValue>> _values = {};
+  final Map<int, bool> _loadingAttr = {};
+  final Map<int, String> _normalizedCache = {};
   final List<AttributeValue> _selected = [];
-  String _query = '';
   bool _loading = true;
+  bool _prefetchedForSearch = false;
+  String _query = '';
 
   @override
   void initState() {
@@ -36,42 +39,75 @@ class _AttributePickerState extends State<AttributePicker> {
     if (widget.initialSelected != null) {
       _selected.addAll(widget.initialSelected!);
     }
-    _load();
+    _loadAttributes();
   }
 
-  Future<void> _load() async {
-    if (mounted) setState(() => _loading = true);
-    final attrs = await widget.loadAttributes();
-    _attributes = attrs;
-    for (final a in attrs) {
-      // Skip any attribute without a valid id to avoid null assertions
-      final aid = a.id;
-      if (aid == null) {
-        debugPrint(
-          '[AttributePicker] Skipping attribute without id: ${a.name}',
-        );
-        continue;
-      }
-      try {
-        final vals = await widget.loadAttributeValues(aid);
-        _values[aid] = vals;
-      } catch (e) {
-        debugPrint(
-          '[AttributePicker] Failed to load values for attribute $aid: $e',
-        );
-        _values[aid] = const <AttributeValue>[];
-      }
+  Future<void> _loadAttributes() async {
+    setState(() => _loading = true);
+    try {
+      _attributes = await widget.loadAttributes();
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-    if (mounted) setState(() => _loading = false);
+  }
+
+  String _normalize(String input) {
+    final lower = input.toLowerCase();
+    final stripped = lower.replaceAll(
+      RegExp('[\u064B-\u065F\u0670\u0671\u06D6-\u06ED\u0640]'),
+      '',
+    );
+    return stripped
+        .replaceAll(RegExp('[إأآٱ]'), 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ؤ', 'و')
+        .replaceAll('ئ', 'ي')
+        .replaceAll(RegExp(' +'), ' ')
+        .trim();
+  }
+
+  Future<void> _ensureValues(int attributeId) async {
+    if (_values.containsKey(attributeId) || _loadingAttr[attributeId] == true)
+      return;
+    _loadingAttr[attributeId] = true;
+    try {
+      final raw = await widget.loadAttributeValues(attributeId);
+      final dedup = <String, AttributeValue>{};
+      for (final v in raw) {
+        final key = _normalize(v.value);
+        dedup.putIfAbsent(key, () => v);
+      }
+      final list = dedup.values.toList();
+      for (final v in list) {
+        if (v.id != null) _normalizedCache[v.id!] = _normalize(v.value);
+      }
+      _values[attributeId] = list;
+    } catch (e) {
+      debugPrint('[AttributePicker] load values error: $e');
+      _values[attributeId] = const <AttributeValue>[];
+    } finally {
+      _loadingAttr[attributeId] = false;
+      if (mounted) setState(() {});
+    }
   }
 
   List<AttributeValue> _searchResults() {
-    if (_query.trim().isEmpty) return [];
-    final q = _query.toLowerCase();
+    final q = _query.trim();
+    if (q.isEmpty) return [];
+    final nq = _normalize(q);
+    if (!_prefetchedForSearch) {
+      _prefetchedForSearch = true;
+      for (final a in _attributes) {
+        if (a.id != null) _ensureValues(a.id!);
+      }
+    }
     final out = <AttributeValue>[];
-    for (final vs in _values.values) {
-      for (final v in vs) {
-        if (v.value.toLowerCase().contains(q)) out.add(v);
+    for (final entries in _values.values) {
+      for (final v in entries) {
+        final norm = v.id != null
+            ? (_normalizedCache[v.id!] ??= _normalize(v.value))
+            : _normalize(v.value);
+        if (norm.contains(nq)) out.add(v);
       }
     }
     return out;
@@ -92,15 +128,12 @@ class _AttributePickerState extends State<AttributePicker> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // حقل البحث
           CupertinoSearchTextField(
             key: const ValueKey('attribute_picker.search'),
-            onChanged: (s) => setState(() => _query = s),
             placeholder: 'بحث في القيم...',
+            onChanged: (s) => setState(() => _query = s),
           ),
           const SizedBox(height: 12),
-
-          // محتوى قابل للتمرير لمنع فيض RenderFlex
           Expanded(
             child: _loading
                 ? const Center(
@@ -126,16 +159,13 @@ class _AttributePickerState extends State<AttributePicker> {
                     ),
                   ),
           ),
-
           const SizedBox(height: 12),
-
-          // زر الإنهاء
           SizedBox(
             width: double.infinity,
             child: CupertinoButton.filled(
               key: const ValueKey('attribute_picker.done'),
-              child: const Text('تم'),
               onPressed: () => widget.onDone(_selected.toList()),
+              child: const Text('تم'),
             ),
           ),
         ],
@@ -151,12 +181,12 @@ class _AttributePickerState extends State<AttributePicker> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: results.length,
-      itemBuilder: (context, idx) {
-        final v = results[idx];
-        final selected = _selected.any((e) => e.id == v.id);
+      itemBuilder: (context, i) {
+        final v = results[i];
+        final selected = _selected.any((s) => s.id == v.id);
         return CupertinoButton(
-          key: ValueKey('attribute_picker.search_item_${v.id ?? idx}'),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          key: ValueKey('attribute_picker.search_item_${v.id ?? i}'),
           onPressed: () => setState(() {
             if (selected) {
               _selected.removeWhere((e) => e.id == v.id);
@@ -179,10 +209,10 @@ class _AttributePickerState extends State<AttributePicker> {
   Widget _buildSuggestions() {
     final results = _searchResults();
     if (results.isEmpty) return const SizedBox.shrink();
-    // Show a horizontal list of suggestions (values not yet selected)
     final suggestions = results
         .where((r) => !_selected.any((s) => s.id == r.id))
         .toList();
+    if (suggestions.isEmpty) return const SizedBox.shrink();
     return SizedBox(
       height: 40,
       child: ListView.builder(
@@ -208,43 +238,6 @@ class _AttributePickerState extends State<AttributePicker> {
     );
   }
 
-  Widget _buildSelectedChip(AttributeValue v, {Key? key}) {
-    return Container(
-      key: key,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: CupertinoColors.systemBlue.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: CupertinoColors.systemBlue),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            v.value,
-            style: const TextStyle(
-              color: CupertinoColors.systemBlue,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _selected.removeWhere((s) => s.id == v.id);
-              });
-            },
-            child: const Icon(
-              CupertinoIcons.clear_circled_solid,
-              size: 16,
-              color: CupertinoColors.systemRed,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildGroupedList() {
     return ListView.builder(
       key: const ValueKey('attribute_picker.grouped_list'),
@@ -253,6 +246,7 @@ class _AttributePickerState extends State<AttributePicker> {
       itemCount: _attributes.length,
       itemBuilder: (context, idx) {
         final attr = _attributes[idx];
+        if (attr.id != null) _ensureValues(attr.id!);
         final vals = attr.id == null
             ? const <AttributeValue>[]
             : (_values[attr.id!] ?? const <AttributeValue>[]);
@@ -260,15 +254,16 @@ class _AttributePickerState extends State<AttributePicker> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Text(
-                key: ValueKey('attribute_picker.group_${attr.id ?? idx}'),
                 attr.name,
+                key: ValueKey('attribute_picker.group_${attr.id ?? idx}'),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
             Wrap(
               spacing: 8,
+              runSpacing: 6,
               children: vals.map((v) {
                 final selected = _selected.contains(v);
                 return GestureDetector(
@@ -326,7 +321,6 @@ class _AttributePickerState extends State<AttributePicker> {
               return Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Left chevron (move left)
                   GestureDetector(
                     key: ValueKey('sel-left-${v.id}') as Key?,
                     onTap: i > 0
@@ -345,9 +339,8 @@ class _AttributePickerState extends State<AttributePicker> {
                     ),
                   ),
                   const SizedBox(width: 2),
-                  _buildSelectedChip(v, key: ValueKey('sel-fallback-${v.id}')),
+                  _buildSelectedChip(v, key: ValueKey('sel-chip-${v.id}')),
                   const SizedBox(width: 2),
-                  // Right chevron (move right)
                   GestureDetector(
                     key: ValueKey('sel-right-${v.id}') as Key?,
                     onTap: i < _selected.length - 1
@@ -372,6 +365,40 @@ class _AttributePickerState extends State<AttributePicker> {
         ),
         const SizedBox(height: 16),
       ],
+    );
+  }
+
+  Widget _buildSelectedChip(AttributeValue v, {Key? key}) {
+    return Container(
+      key: key,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: CupertinoColors.systemBlue.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: CupertinoColors.systemBlue),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            v.value,
+            style: const TextStyle(
+              color: CupertinoColors.systemBlue,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: () =>
+                setState(() => _selected.removeWhere((s) => s.id == v.id)),
+            child: const Icon(
+              CupertinoIcons.clear_circled_solid,
+              size: 16,
+              color: CupertinoColors.systemRed,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

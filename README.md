@@ -1,13 +1,23 @@
 # Clothes POS
 
-iOS-style (Cupertino) Point-of-Sale app for clothing stores, built with Flutter. Local SQLite first, future-ready for online sync.
+![CI](https://github.com/lionzentany-source/clothes_pos/actions/workflows/ci.yml/badge.svg)
+![Android Release](https://github.com/lionzentany-source/clothes_pos/actions/workflows/android-release.yml/badge.svg)
+![License](https://img.shields.io/badge/license-Private-informational)
 
-## Features (initial)
+iOS-style (Cupertino) Point-of-Sale app for clothing stores, built with Flutter.
+Local-first (SQLite) architecture, dynamic product attributes, offline‑friendly vision, and printable receipts / labels.
 
-- Cupertino iOS UI with 4 tabs: POS, Inventory, Reports, Settings
-- Local SQLite DB (sqflite): products/variants, sales/purchases, inventory movements, users/roles, cash sessions
-- PDF printing for receipts/reports; charts with fl_chart
-- Barcode scanning (camera); RFID/thermal printer to be selected later
+## Core Features
+
+- Cupertino iOS UI: POS, Inventory, Reports, Settings.
+- Dynamic attributes system (no fixed size/color columns) with migration tooling (migrations 022–025) and attribute picker UI.
+- Local SQLite (sqflite / ffi) for: products, variants, sales, purchases, inventory movements, cash sessions, users / roles.
+- Barcode scanning via `barcode_scan2` (replaces legacy `flutter_barcode_scanner`).
+- Printable PDFs (receipts, reports) with Arabic font embedding (Noto Naskh Arabic + SF Arabic fallback) and thermal ESC/POS output.
+- Cash session management (open/close, variance logging).
+- Offline-friendly seeding & canonical clean DB utilities.
+- Charts & KPIs (fl_chart) + reporting repositories.
+- Modular DI (`get_it`) and layered repository adapters (planned expansion).
 
 ## Run
 
@@ -21,7 +31,7 @@ flutter pub get
 flutter run
 ```
 
-## Developer: clean DB (dynamic attributes)
+## Developer: Dynamic Attributes / Clean DB
 
 For working with a fresh, canonical clean database (no legacy size/color columns) the repo uses `backups/clothes_pos_clean.db`.
 
@@ -35,7 +45,7 @@ dart run tool/query_variant_attributes.dart 1   # print attributes for variant 1
 
 These tools write/read the canonical `backups/clothes_pos_clean.db` file. Remove other `.db` duplicates under `.dart_tool` if you need to reclaim space; the canonical backups file is the one used by the tooling.
 
-## Project Structure
+## Project Structure (selected)
 
 - presentation/: Cupertino UI & routing (go_router)
 - domain/: entities & use cases (planned)
@@ -62,7 +72,9 @@ Simple workflow runs analyze and tests on PRs (see `.github/workflows/ci.yml`). 
 
 You can extend it with a production release job that performs an obfuscated, size‑optimized build once signing is configured (see below).
 
-### Android Release Signing & Optimized Build
+### Android Release & Versioning
+
+Current version: `1.0.1+3` (bumped after tagging `v1.0.0+2`). Use semantic (MAJOR.MINOR.PATCH+BUILD).
 
 1. Generate a keystore (one time):
    ```powershell
@@ -88,6 +100,26 @@ Optional size wins:
 - Add ABI splits (Play Store will auto split AAB; for APK you can use `--target-platform android-arm,android-arm64,android-x64` with separate builds)
 - Use `--tree-shake-icons` if using Material icons subset only (verify Cupertino dependencies first)
 
-### PDF Arabic Font Fallback (Planned)
+### PDF Arabic Font & Localization
+
+## CHANGELOG
+
+See `CHANGELOG.md` (auto-generated summary below when present). If missing, generate with:
+
+```powershell
+git log --pretty="* %h %s" v1.0.0+2..HEAD > CHANGELOG.md
+```
+
+## Roadmap (abridged)
+
+- Background sync & conflict resolution
+- Rich discount engine & promotions
+- Multi-store replication
+- Advanced reporting dashboards
+- Full hardware integration (RFID gates, network printers auto-discovery)
+
+---
+
+For internal/private use. Do not distribute binaries externally without authorization.
 
 To eliminate glyph warnings in generated PDFs, add high-quality Arabic fonts (e.g., Noto Naskh Arabic Regular/Bold) under `assets/fonts/` (filenames must match the entries added in `pubspec.yaml`). The label template engine loads in this priority: Noto Regular -> Noto Bold -> SF Arabic -> SF Latin. Missing assets are skipped silently. Add a widget / unit test later to assert at least one Arabic-capable font loads for deterministic output.
