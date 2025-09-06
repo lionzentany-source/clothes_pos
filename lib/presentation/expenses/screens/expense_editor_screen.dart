@@ -58,7 +58,7 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
     DateTime temp = _date;
     await showCupertinoModalPopup(
       context: context,
-      builder: (_) => Container(
+      builder: (sheetCtx) => Container(
         color: CupertinoColors.systemGroupedBackground,
         height: 300,
         child: Column(
@@ -75,13 +75,13 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 CupertinoButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(sheetCtx).pop(),
                   child: const Text('إلغاء'),
                 ),
                 CupertinoButton(
                   onPressed: () {
                     setState(() => _date = temp);
-                    Navigator.of(context).pop();
+                    Navigator.of(sheetCtx).pop();
                   },
                   child: const Text('اختر'),
                 ),
@@ -135,7 +135,12 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
         await _repo.updateExpense(exp, userId: userId);
       }
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      // Defer pop to next microtask to avoid Navigator re-entrancy glitches on desktop.
+      Future.microtask(() {
+        if (!mounted) return;
+        final nav = Navigator.of(context);
+        if (nav.canPop()) nav.pop(true);
+      });
     } catch (e) {
       _showErr(SqlErrorHelper.toArabicMessage(e));
     } finally {
@@ -144,14 +149,15 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
   }
 
   void _showErr(String msg) {
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogCtx) => CupertinoAlertDialog(
         title: const Text('خطأ'),
         content: Text(msg),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => Navigator.of(dialogCtx).pop(),
             child: const Text('حسناً'),
           ),
         ],
@@ -196,20 +202,20 @@ class _ExpenseEditorScreenState extends State<ExpenseEditorScreen> {
                       final cats = _cats;
                       await showCupertinoModalPopup(
                         context: context,
-                        builder: (_) => CupertinoActionSheet(
+                        builder: (sheetCtx) => CupertinoActionSheet(
                           title: const Text('اختر الفئة'),
                           actions: [
                             for (final c in cats)
                               CupertinoActionSheetAction(
                                 onPressed: () {
-                                  Navigator.of(context).pop();
+                                  Navigator.of(sheetCtx).pop();
                                   setState(() => _category = c);
                                 },
                                 child: Text(c.name),
                               ),
                           ],
                           cancelButton: CupertinoActionSheetAction(
-                            onPressed: () => Navigator.of(context).pop(),
+                            onPressed: () => Navigator.of(sheetCtx).pop(),
                             isDefaultAction: true,
                             child: const Text('إلغاء'),
                           ),

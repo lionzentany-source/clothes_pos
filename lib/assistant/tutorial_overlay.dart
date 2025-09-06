@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart' show Colors; // for semi-transparent overlay color
+import 'package:flutter/material.dart'
+    show Colors; // for semi-transparent overlay color
 
 class TutorialStep {
   final String title;
@@ -46,9 +47,13 @@ class _TutorialOverlayState extends State<_TutorialOverlay> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(step.title,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(
+                  step.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Text(step.description),
                 const SizedBox(height: 12),
@@ -64,12 +69,12 @@ class _TutorialOverlayState extends State<_TutorialOverlay> {
                     CupertinoButton.filled(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       onPressed: _next,
-                      child: Text(_index < widget.steps.length - 1
-                          ? 'التالي'
-                          : 'إنهاء'),
+                      child: Text(
+                        _index < widget.steps.length - 1 ? 'التالي' : 'إنهاء',
+                      ),
                     ),
                   ],
-                )
+                ),
               ],
             ),
           ),
@@ -79,11 +84,14 @@ class _TutorialOverlayState extends State<_TutorialOverlay> {
   }
 }
 
-Future<void> showTutorial(BuildContext context, List<TutorialStep> steps) async {
+Future<void> showTutorial(
+  BuildContext context,
+  List<TutorialStep> steps,
+) async {
+  if (!context.mounted) return; // safety
   await showCupertinoDialog(
     context: context,
     barrierDismissible: true,
     builder: (_) => _TutorialOverlay(steps: steps),
   );
 }
-

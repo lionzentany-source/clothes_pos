@@ -45,6 +45,7 @@ class _FacebookBotSettingsScreenState extends State<FacebookBotSettingsScreen> {
     cubit.setFacebookPageId(_pageIdController.text.trim());
 
     // Show a confirmation dialog
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(

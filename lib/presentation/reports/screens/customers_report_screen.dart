@@ -61,6 +61,7 @@ class _CustomersReportScreenState extends State<CustomersReportScreen> {
   }
 
   void _showErrorDialog(String title, String message) {
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(

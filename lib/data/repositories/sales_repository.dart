@@ -82,6 +82,8 @@ class SalesRepository {
 
   Future<List<SaleItem>> itemsForSale(int saleId) => dao.itemsForSale(saleId);
   Future<Sale> getSale(int saleId) => dao.getSale(saleId);
+  Future<Map<String, dynamic>?> getSaleInfo(int saleId) =>
+      dao.getSaleInfo(saleId);
   Future<List<Payment>> paymentsForSale(int saleId) =>
       dao.paymentsForSale(saleId);
 

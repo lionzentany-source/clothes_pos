@@ -40,24 +40,38 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 add_dependencies(${BINARY_NAME} flutter_assemble)
 
 
-# Copy UHFPrimeReader.dll next to the runner executable if present
-# Try project root first, then the windows/ directory
-# CMAKE_SOURCE_DIR here is windows/runner. Compute project root and windows dir.
-set(UHF_DLL_SOURCE_PROJECT_ROOT "${CMAKE_SOURCE_DIR}/../../UHF Desk Reader SDK/API/UHFPrimeReader.dll")
-set(UHF_DLL_SOURCE_WINDOWS_DIR "${CMAKE_SOURCE_DIR}/../UHF Desk Reader SDK/API/UHFPrimeReader.dll")
+### Copy required native DLLs next to the runner executable if present
+# Note: CMAKE_SOURCE_DIR here is windows/runner. Compute project root and windows dir.
+set(PROJECT_ROOT "${CMAKE_SOURCE_DIR}/..")
+set(UHF_DLL_PROJECT_ROOT "${PROJECT_ROOT}/../UHF Desk Reader SDK/API/UHFPrimeReader.dll")
+set(UHF_DLL_WINDOWS_DIR "${PROJECT_ROOT}/UHF Desk Reader SDK/API/UHFPrimeReader.dll")
+set(HID_DLL_PROJECT_ROOT "${PROJECT_ROOT}/../hidapi.dll")
+set(HID_DLL_WINDOWS_DIR "${PROJECT_ROOT}/hidapi.dll")
 
-if (EXISTS "${UHF_DLL_SOURCE_PROJECT_ROOT}")
-  add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Copying UHFPrimeReader.dll from project root"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${UHF_DLL_SOURCE_PROJECT_ROOT}" "$<TARGET_FILE_DIR:${BINARY_NAME}>/UHFPrimeReader.dll"
-    VERBATIM
-  )
-elseif (EXISTS "${UHF_DLL_SOURCE_WINDOWS_DIR}")
-  add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Copying UHFPrimeReader.dll from windows/"
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different "${UHF_DLL_SOURCE_WINDOWS_DIR}" "$<TARGET_FILE_DIR:${BINARY_NAME}>/UHFPrimeReader.dll"
-    VERBATIM
-  )
+function(copy_if_exists SRC_NAME SRC_PATH)
+  if (EXISTS "${SRC_PATH}")
+    add_custom_command(TARGET ${BINARY_NAME} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E echo "Copying ${SRC_NAME}"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different "${SRC_PATH}" "$<TARGET_FILE_DIR:${BINARY_NAME}>/${SRC_NAME}"
+      VERBATIM)
+    return()
+  endif()
+endfunction()
+
+# Try UHFPrimeReader.dll (project root then windows/)
+if (EXISTS "${UHF_DLL_PROJECT_ROOT}")
+  copy_if_exists("UHFPrimeReader.dll" "${UHF_DLL_PROJECT_ROOT}")
+elseif (EXISTS "${UHF_DLL_WINDOWS_DIR}")
+  copy_if_exists("UHFPrimeReader.dll" "${UHF_DLL_WINDOWS_DIR}")
 else()
   message(WARNING "UHFPrimeReader.dll not found. Place it under '<project root>/UHF Desk Reader SDK/API/' or under '<project root>/windows/UHF Desk Reader SDK/API/'.")
+endif()
+
+# Try hidapi.dll (project root then windows/)
+if (EXISTS "${HID_DLL_PROJECT_ROOT}")
+  copy_if_exists("hidapi.dll" "${HID_DLL_PROJECT_ROOT}")
+elseif (EXISTS "${HID_DLL_WINDOWS_DIR}")
+  copy_if_exists("hidapi.dll" "${HID_DLL_WINDOWS_DIR}")
+else()
+  message(WARNING "hidapi.dll not found at project root or windows/. Ensure it is bundled next to the EXE for Windows builds.")
 endif()

@@ -17,7 +17,7 @@ class TestDb {
           'CREATE TABLE sales (id INTEGER PRIMARY KEY AUTOINCREMENT, total_amount REAL NOT NULL, sale_date TEXT NOT NULL)',
         );
         await db.execute(
-          'CREATE TABLE sale_items (id INTEGER PRIMARY KEY AUTOINCREMENT, sale_id INTEGER NOT NULL, variant_id INTEGER NOT NULL, quantity INTEGER NOT NULL, price_per_unit REAL NOT NULL)',
+          'CREATE TABLE sale_items (id INTEGER PRIMARY KEY AUTOINCREMENT, sale_id INTEGER NOT NULL, variant_id INTEGER NOT NULL, quantity INTEGER NOT NULL, price_per_unit REAL NOT NULL, attributes TEXT)',
         );
         await db.execute(
           'CREATE TABLE inventory_movements (id INTEGER PRIMARY KEY AUTOINCREMENT, variant_id INTEGER NOT NULL, qty_change INTEGER NOT NULL, movement_type TEXT NOT NULL)',

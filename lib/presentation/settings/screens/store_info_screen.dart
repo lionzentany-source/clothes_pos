@@ -91,13 +91,13 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
       final l = AppLocalizations.of(context);
       await showCupertinoDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        builder: (ctx) => CupertinoAlertDialog(
           title: Text(l.done),
           content: Text(l.infoSaved),
           actions: [
             CupertinoDialogAction(
               isDefaultAction: true,
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(ctx).pop(),
               child: Text(l.ok),
             ),
           ],
@@ -191,13 +191,17 @@ class _StoreInfoScreenState extends State<StoreInfoScreen> {
                               if (!mounted || !context.mounted) return;
                               await showCupertinoDialog(
                                 context: context,
-                                builder: (_) => const CupertinoAlertDialog(
+                                builder: (ctx) => const CupertinoAlertDialog(
                                   title: Text('حجم كبير'),
                                   content: Text(
                                     'يرجى اختيار صورة أقل من 150KB للحصول على طباعة أسرع.',
                                   ),
                                 ),
                               );
+                              // Ensure the user can dismiss (older dialog had no actions)
+                              if (context.mounted) {
+                                Navigator.of(context).maybePop();
+                              }
                               return;
                             }
                             setState(() => _logoBase64 = base64Encode(bytes));

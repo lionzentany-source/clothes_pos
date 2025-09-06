@@ -86,14 +86,15 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       */
 
       // For now, keep the existing dialog approach
+      if (!context.mounted) return; // safety
       await showCupertinoDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        builder: (dialogCtx) => CupertinoAlertDialog(
           title: const Text('تم إنشاء CSV'),
           content: const Text('انسخ النص ثم الصقه في ملف .csv'),
           actions: [
             CupertinoDialogAction(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: const Text('إغلاق'),
             ),
           ],
@@ -201,12 +202,12 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
       if (!mounted) return;
       await showCupertinoDialog(
         context: context,
-        builder: (_) => CupertinoAlertDialog(
+        builder: (dialogCtx) => CupertinoAlertDialog(
           title: const Text('خطأ تحميل المصروفات'),
           content: Text(e.toString()),
           actions: [
             CupertinoDialogAction(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(dialogCtx).pop(),
               child: const Text('إغلاق'),
             ),
           ],
@@ -257,7 +258,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     DateTime temp = base;
     await showCupertinoModalPopup(
       context: context,
-      builder: (_) => Container(
+      builder: (sheetCtx) => Container(
         color: CupertinoColors.systemGroupedBackground,
         height: 300,
         child: Column(
@@ -274,7 +275,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 CupertinoButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(sheetCtx).pop(),
                   child: const Text('إلغاء'),
                 ),
                 CupertinoButton(
@@ -286,7 +287,7 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                         _end = DateTime(temp.year, temp.month, temp.day);
                       }
                     });
-                    Navigator.of(context).pop();
+                    Navigator.of(sheetCtx).pop();
                     _load();
                   },
                   child: const Text('اختر'),
@@ -369,6 +370,8 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
     final changed = await Navigator.of(context).push<bool>(
       CupertinoPageRoute(builder: (_) => ExpenseEditorScreen(existing: e)),
     );
+    // Guard against using state after the widget may have been disposed while the editor route was open
+    if (!mounted) return;
     if (changed == true) {
       AppLogger.d('ExpenseListScreen editor returned changed');
       _load();
@@ -588,25 +591,30 @@ class _ExpenseListScreenState extends State<ExpenseListScreen> {
                                         ?.id;
                                     final ok = await showCupertinoDialog<bool>(
                                       context: context,
-                                      builder: (_) => CupertinoAlertDialog(
-                                        title: const Text('حذف'),
-                                        content: const Text(
-                                          'تأكيد حذف المصروف؟',
-                                        ),
-                                        actions: [
-                                          CupertinoDialogAction(
-                                            onPressed: () =>
-                                                Navigator.pop(context, false),
-                                            child: const Text('إلغاء'),
+                                      builder: (dialogCtx) =>
+                                          CupertinoAlertDialog(
+                                            title: const Text('حذف'),
+                                            content: const Text(
+                                              'تأكيد حذف المصروف؟',
+                                            ),
+                                            actions: [
+                                              CupertinoDialogAction(
+                                                onPressed: () => Navigator.pop(
+                                                  dialogCtx,
+                                                  false,
+                                                ),
+                                                child: const Text('إلغاء'),
+                                              ),
+                                              CupertinoDialogAction(
+                                                isDestructiveAction: true,
+                                                onPressed: () => Navigator.pop(
+                                                  dialogCtx,
+                                                  true,
+                                                ),
+                                                child: const Text('حذف'),
+                                              ),
+                                            ],
                                           ),
-                                          CupertinoDialogAction(
-                                            isDestructiveAction: true,
-                                            onPressed: () =>
-                                                Navigator.pop(context, true),
-                                            child: const Text('حذف'),
-                                          ),
-                                        ],
-                                      ),
                                     );
                                     if (ok == true) {
                                       await _repo.deleteExpense(

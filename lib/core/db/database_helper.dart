@@ -100,15 +100,66 @@ class DatabaseHelper {
           stackTrace: st,
         );
       }
+      // Ensure held-sales tables exist and have expected columns
+      try {
+        await _db!.execute('''
+          CREATE TABLE IF NOT EXISTS held_sales (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            ts TEXT NOT NULL
+          );
+        ''');
+        await _db!.execute('''
+          CREATE TABLE IF NOT EXISTS held_sale_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            held_sale_id INTEGER NOT NULL,
+            variant_id INTEGER NOT NULL,
+            quantity INTEGER NOT NULL,
+            price REAL NOT NULL,
+            FOREIGN KEY (held_sale_id) REFERENCES held_sales(id) ON DELETE CASCADE
+          );
+        ''');
+        // Patch missing columns on existing installs
+        final cols = await _db!.rawQuery('PRAGMA table_info(held_sale_items)');
+        final hasAttributes = cols.any(
+          (c) => (c['name'] as String?) == 'attributes',
+        );
+        final hasPriceOverride = cols.any(
+          (c) => (c['name'] as String?) == 'price_override',
+        );
+        if (!hasAttributes) {
+          await _db!.execute(
+            'ALTER TABLE held_sale_items ADD COLUMN attributes TEXT;',
+          );
+        }
+        if (!hasPriceOverride) {
+          await _db!.execute(
+            'ALTER TABLE held_sale_items ADD COLUMN price_override REAL;',
+          );
+        }
+        // Helpful indexes
+        await _db!.execute(
+          'CREATE INDEX IF NOT EXISTS idx_held_sales_ts ON held_sales(ts);',
+        );
+        await _db!.execute(
+          'CREATE INDEX IF NOT EXISTS idx_held_sale_items_held ON held_sale_items(held_sale_id);',
+        );
+      } catch (e, st) {
+        AppLogger.e(
+          'Failed to ensure held-sales tables/columns',
+          error: e,
+          stackTrace: st,
+        );
+      }
       swMain.stop();
       AppLogger.d(
-        'DatabaseHelper.get database init success in \\${swMain.elapsedMilliseconds}ms',
+        'DatabaseHelper.get database init success in ${swMain.elapsedMilliseconds}ms',
       );
       return _db!;
     } catch (e, st) {
       swMain.stop();
       AppLogger.e(
-        'DatabaseHelper.get database init failed after ���swMain.elapsedMilliseconds}ms',
+        'DatabaseHelper.get database init failed after ${swMain.elapsedMilliseconds}ms',
         error: e,
         stackTrace: st,
       );
@@ -147,7 +198,7 @@ class DatabaseHelper {
         } catch (_) {}
         cfgSw.stop();
         AppLogger.d(
-          'DatabaseHelper.onConfigure done in \${cfgSw.elapsedMilliseconds}ms',
+          'DatabaseHelper.onConfigure done in ${cfgSw.elapsedMilliseconds}ms',
         );
       },
       onCreate: (db, version) async {
@@ -197,7 +248,7 @@ class DatabaseHelper {
         }
         createSw.stop();
         AppLogger.d(
-          'DatabaseHelper.onCreate complete in \${createSw.elapsedMilliseconds}ms',
+          'DatabaseHelper.onCreate complete in ${createSw.elapsedMilliseconds}ms',
         );
         // Apply any initial migration scripts that are expected for the current
         // schema version (fresh DBs should include migration-created tables).

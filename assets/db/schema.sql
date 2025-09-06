@@ -264,6 +264,24 @@ CREATE INDEX IF NOT EXISTS idx_purchase_items_invoice ON purchase_invoice_items(
 CREATE INDEX IF NOT EXISTS idx_payments_sale ON payments(sale_id);
 CREATE INDEX IF NOT EXISTS idx_cash_session_opened ON cash_sessions(opened_at);
 
+-- Held sales (persisted multi-slot held/parked carts)
+CREATE TABLE IF NOT EXISTS held_sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT,
+  ts TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS held_sale_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  held_sale_id INTEGER NOT NULL,
+  variant_id INTEGER NOT NULL,
+  quantity INTEGER NOT NULL,
+  price REAL NOT NULL,
+  FOREIGN KEY (held_sale_id) REFERENCES held_sales(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_held_sales_ts ON held_sales(ts);
+CREATE INDEX IF NOT EXISTS idx_held_sale_items_held ON held_sale_items(held_sale_id);
 -- Additional tables and indexes from migrations
 CREATE TABLE IF NOT EXISTS product_variant_rfids (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -325,4 +343,14 @@ CREATE TABLE IF NOT EXISTS usage_logs (
 
 CREATE INDEX IF NOT EXISTS idx_usage_logs_timestamp ON usage_logs(timestamp);
 CREATE INDEX IF NOT EXISTS idx_usage_logs_event_type ON usage_logs(event_type);
+
+-- Pending invoices queue for offline sync
+CREATE TABLE IF NOT EXISTS pending_invoices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  payload TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  attempts INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending'
+);
+CREATE INDEX IF NOT EXISTS idx_pending_invoices_status ON pending_invoices(status);
 

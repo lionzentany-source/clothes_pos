@@ -3,6 +3,10 @@ import 'dart:math' as math;
 import 'app_colors.dart';
 import 'app_typography.dart';
 
+// Layout constants used across the presentation layer.
+const double kPosNarrowBreakpoint =
+    900.0; // viewport width <= this is considered "narrow"
+
 class AppTheme {
   static CupertinoThemeData light() {
     final base = CupertinoThemeData(

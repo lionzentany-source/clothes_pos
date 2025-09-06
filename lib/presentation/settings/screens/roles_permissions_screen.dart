@@ -47,6 +47,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
   Future<void> _addRoleDialog() async {
     final ctrl = TextEditingController();
     final l = AppLocalizations.of(context);
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
@@ -98,6 +99,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
     final current = await _repo.getRolePermissionIds(roleId);
     final selected = current.toSet();
     if (!mounted || !context.mounted) return;
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -157,6 +159,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
   Future<void> _renameRole(Map<String, Object?> role) async {
     final ctrl = TextEditingController(text: role['name'] as String? ?? '');
     final l = AppLocalizations.of(context);
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
@@ -207,6 +210,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
     final l = AppLocalizations.of(context);
     if (!mounted || !context.mounted) return;
     if (!mounted || !context.mounted) return;
+    if (!context.mounted) return; // safety
     final ok = await showCupertinoDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
@@ -235,6 +239,7 @@ class _RolesPermissionsScreenState extends State<RolesPermissionsScreen> {
         await context.read<AuthCubit>().refreshCurrentUserPermissions();
       }
     } else {
+      if (!context.mounted) return; // safety
       await showCupertinoDialog(
         context: context,
         builder: (ctx) => CupertinoAlertDialog(

@@ -1,4 +1,6 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/cupertino.dart';
+import 'package:clothes_pos/presentation/pos/screens/advanced_product_search_screen.dart';
 import 'package:flutter/material.dart' show Tooltip;
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/models/parent_product.dart';
@@ -38,12 +40,15 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
 
   Future<void> _openParentVariants(ParentProduct p) async {
     // Fetch variants and show a simple chooser
+    final c = context; // capture
+    final nav = Navigator.of(c);
     final vs = await _repo.getVariantsByParent(p.id!);
+    if (!c.mounted) return;
     final selected = await showCupertinoModalPopup<ProductVariant?>(
-      context: context,
+      context: c,
       builder: (ctx) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.75,
+          height: MediaQuery.of(ctx).size.height * 0.75,
           decoration: const BoxDecoration(
             color: CupertinoColors.systemBackground,
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -96,11 +101,15 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
       },
     );
 
-    if (selected != null && mounted)
-      Navigator.of(context).pop<ProductVariant>(selected);
+    if (!c.mounted) return;
+    if (selected != null) {
+      nav.pop<ProductVariant>(selected);
+    }
   }
 
   Future<void> _createVariantForParent(ParentProduct p) async {
+    final c = context; // capture
+    final nav = Navigator.of(c);
     // Show modal to collect inputs and optional attribute values
     final skuCtrl = TextEditingController();
     final costCtrl = TextEditingController(text: '0');
@@ -138,13 +147,14 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
 
     final Map<int, AttributeValue?> selectedValues = {};
 
+    if (!c.mounted) return;
     final created = await showCupertinoModalPopup<ProductVariant?>(
-      context: context,
+      context: c,
       builder: (ctx) {
         return StatefulBuilder(
           builder: (sctx, setModalState) {
             return Container(
-              height: MediaQuery.of(context).size.height * 0.8,
+              height: MediaQuery.of(sctx).size.height * 0.8,
               decoration: const BoxDecoration(
                 color: CupertinoColors.systemBackground,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -311,17 +321,19 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
                                 FutureBuilder<List<AttributeValue>>(
                                   future: _repo.getAttributeValues(attr.id!),
                                   builder: (ctx2, snap) {
-                                    if (!snap.hasData)
+                                    if (!snap.hasData) {
                                       return const CupertinoActivityIndicator();
+                                    }
                                     final vals = snap.data!;
                                     return CupertinoButton(
                                       padding: EdgeInsets.zero,
                                       onPressed: () async {
+                                        if (!sctx.mounted) return;
                                         final sel =
                                             await showCupertinoModalPopup<
                                               AttributeValue?
                                             >(
-                                              context: context,
+                                              context: sctx,
                                               builder: (c2) => Container(
                                                 height: 300,
                                                 decoration: const BoxDecoration(
@@ -377,11 +389,12 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
                                                 ),
                                               ),
                                             );
-                                        if (sel != null)
+                                        if (sel != null) {
                                           setModalState(
                                             () =>
                                                 selectedValues[attr.id!] = sel,
                                           );
+                                        }
                                       },
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(
@@ -453,8 +466,10 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
       },
     );
 
-    if (created != null && mounted)
-      Navigator.of(context).pop<ProductVariant>(created);
+    if (!c.mounted) return;
+    if (created != null) {
+      nav.pop<ProductVariant>(created);
+    }
   }
 
   @override
@@ -473,6 +488,24 @@ class _ParentSearchPageState extends State<ParentSearchPage> {
                 onSubmitted: (_) => _search(),
                 onChanged: (_) => _search(),
                 placeholder: 'اسم المنتج الأب',
+                prefixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => AdvancedProductSearchScreen.open(context),
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: Icon(
+                          CupertinoIcons.slider_horizontal_3,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(CupertinoIcons.search, size: 18),
+                    const SizedBox(width: 4),
+                  ],
+                ),
               ),
             ),
             Expanded(

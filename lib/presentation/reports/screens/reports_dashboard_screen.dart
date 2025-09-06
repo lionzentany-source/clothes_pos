@@ -87,6 +87,7 @@ class _ReportsDashboardScreenState extends State<ReportsDashboardScreen> {
 
   /// عرض رسالة خطأ
   void _showErrorDialog(String message) {
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(

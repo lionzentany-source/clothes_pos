@@ -102,7 +102,9 @@ class AiSettings {
     required this.model,
     this.apiKey,
     required this.temperature,
-    this.requestTimeout = const Duration(seconds: 45), // Increased timeout for complex tasks
+    this.requestTimeout = const Duration(
+      seconds: 45,
+    ), // Increased timeout for complex tasks
     this.maxRetries = 3,
   });
 
@@ -138,7 +140,11 @@ class OpenScreenAction extends AiAction {
   @override
   String get actionType => 'open_screen';
   @override
-  Map<String, dynamic> toJson() => {'action': actionType, 'tab': tab, if (screen != null) 'screen': screen};
+  Map<String, dynamic> toJson() => {
+    'action': actionType,
+    'tab': tab,
+    if (screen != null) 'screen': screen,
+  };
 }
 
 class AnswerFaqAction extends AiAction {
@@ -156,8 +162,10 @@ class UnknownAction extends AiAction {
   @override
   String get actionType => 'unknown';
   @override
-  Map<String, dynamic> toJson() =>
-      {'action': actionType, 'original_text': originalText};
+  Map<String, dynamic> toJson() => {
+    'action': actionType,
+    'original_text': originalText,
+  };
 }
 
 // Data Query Actions
@@ -165,17 +173,20 @@ class QueryMetricAction extends AiAction {
   final MetricType metric;
   final String range;
   final Map<String, dynamic>? filters;
-  const QueryMetricAction(
-      {required this.metric, required this.range, this.filters});
+  const QueryMetricAction({
+    required this.metric,
+    required this.range,
+    this.filters,
+  });
   @override
   String get actionType => 'query_metric';
   @override
   Map<String, dynamic> toJson() => {
-        'action': actionType,
-        'metric': metric.stringValue,
-        'range': range,
-        if (filters != null) 'filters': filters
-      };
+    'action': actionType,
+    'metric': metric.stringValue,
+    'range': range,
+    if (filters != null) 'filters': filters,
+  };
 }
 
 class SearchProductAction extends AiAction {
@@ -196,7 +207,11 @@ class CreateReportAction extends AiAction {
   @override
   String get actionType => 'create_report';
   @override
-  Map<String, dynamic> toJson() => {'action': actionType, 'type': type, 'range': range};
+  Map<String, dynamic> toJson() => {
+    'action': actionType,
+    'type': type,
+    'range': range,
+  };
 }
 
 class SearchCustomerAction extends AiAction {
@@ -215,7 +230,11 @@ class QueryInventoryAction extends AiAction {
   @override
   String get actionType => 'query_inventory';
   @override
-  Map<String, dynamic> toJson() => {'action': actionType, 'query': query, if (status != null) 'status': status};
+  Map<String, dynamic> toJson() => {
+    'action': actionType,
+    'query': query,
+    if (status != null) 'status': status,
+  };
 }
 
 class AddProductAction extends AiAction {
@@ -239,14 +258,14 @@ class AddProductAction extends AiAction {
   String get actionType => 'add_product';
   @override
   Map<String, dynamic> toJson() => {
-        'action': actionType,
-        'name': name,
-        'sale_price': salePrice,
-        'quantity': quantity,
-        'size': size,
-        'color': color,
-        'category': category,
-      };
+    'action': actionType,
+    'name': name,
+    'sale_price': salePrice,
+    'quantity': quantity,
+    'size': size,
+    'color': color,
+    'category': category,
+  };
 }
 
 // --- User-suggested Actions ---
@@ -259,36 +278,47 @@ class ForecastDemandAction extends AiAction {
   @override
   String get actionType => 'forecast_demand';
   @override
-  Map<String, dynamic> toJson() =>
-      {'action': actionType, 'product_name': productName, 'period': period};
+  Map<String, dynamic> toJson() => {
+    'action': actionType,
+    'product_name': productName,
+    'period': period,
+  };
 }
 
 /// Action to analyze the root cause of a business anomaly.
 class AnalyzeRootCauseAction extends AiAction {
   final String eventDescription; // e.g., "low sales on Tuesday"
   final String date;
-  const AnalyzeRootCauseAction({required this.eventDescription, required this.date});
+  const AnalyzeRootCauseAction({
+    required this.eventDescription,
+    required this.date,
+  });
   @override
   String get actionType => 'analyze_root_cause';
   @override
-  Map<String, dynamic> toJson() =>
-      {'action': actionType, 'event': eventDescription, 'date': date};
+  Map<String, dynamic> toJson() => {
+    'action': actionType,
+    'event': eventDescription,
+    'date': date,
+  };
 }
 
 /// Action to automatically generate a description for a product.
 class GenerateProductDescriptionAction extends AiAction {
   final String productName;
   final List<String> keywords; // e.g., ["cotton", "blue", "slim_fit"]
-  const GenerateProductDescriptionAction(
-      {required this.productName, required this.keywords});
+  const GenerateProductDescriptionAction({
+    required this.productName,
+    required this.keywords,
+  });
   @override
   String get actionType => 'generate_product_description';
   @override
   Map<String, dynamic> toJson() => {
-        'action': actionType,
-        'product_name': productName,
-        'keywords': keywords
-      };
+    'action': actionType,
+    'product_name': productName,
+    'keywords': keywords,
+  };
 }
 
 // --- Action Parser (Expanded) ---
@@ -302,14 +332,19 @@ class ActionParser {
           .replaceAll(RegExp(r'```\s*'), '')
           .trim();
 
-      if (cleanText.isEmpty) return const UnknownAction(originalText: 'Empty response from model');
+      if (cleanText.isEmpty) {
+        return const UnknownAction(originalText: 'Empty response from model');
+      }
 
       final Map<String, dynamic> json = jsonDecode(cleanText);
       final action = json['action']?.toString().toLowerCase() ?? '';
 
       switch (action) {
         case 'open_screen':
-          return OpenScreenAction(tab: json['tab'] ?? '', screen: json['screen'] as String?);
+          return OpenScreenAction(
+            tab: json['tab'] ?? '',
+            screen: json['screen'] as String?,
+          );
         case 'answer_faq':
           return AnswerFaqAction(json['text'] ?? '');
         case 'query_metric':
@@ -325,11 +360,17 @@ class ActionParser {
         case 'search_product':
           return SearchProductAction(query: json['query'] ?? '');
         case 'create_report':
-          return CreateReportAction(type: json['type'] ?? '', range: json['range'] ?? '');
+          return CreateReportAction(
+            type: json['type'] ?? '',
+            range: json['range'] ?? '',
+          );
         case 'search_customer':
           return SearchCustomerAction(query: json['query'] ?? '');
         case 'query_inventory':
-          return QueryInventoryAction(query: json['query'] ?? '', status: json['status'] as String?);
+          return QueryInventoryAction(
+            query: json['query'] ?? '',
+            status: json['status'] as String?,
+          );
         case 'add_product':
           return AddProductAction(
             name: json['name'] ?? '',
@@ -381,12 +422,15 @@ class AiException implements Exception {
 }
 
 class AiConnectionException extends AiException {
-  const AiConnectionException(String message, {String? code, dynamic originalError})
-      : super(message, code: code, originalError: originalError);
+  const AiConnectionException(super.message, {super.code, super.originalError});
 }
 
 class AiRateLimitException extends AiException {
   final Duration retryAfter;
-  const AiRateLimitException(String message, this.retryAfter, {String? code, dynamic originalError})
-      : super(message, code: code, originalError: originalError);
+  const AiRateLimitException(
+    super.message,
+    this.retryAfter, {
+    super.code,
+    super.originalError,
+  });
 }

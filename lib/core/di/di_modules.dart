@@ -37,7 +37,17 @@ import 'package:clothes_pos/data/datasources/audit_dao.dart';
 import 'package:clothes_pos/data/repositories/audit_repository.dart';
 import 'package:clothes_pos/data/repositories/aggregated_reports_repository.dart';
 import 'package:clothes_pos/core/db/database_helper.dart';
+import 'package:clothes_pos/services/sync_service.dart';
+import 'package:clothes_pos/data/repositories/interfaces/invoice_repository.dart';
+import 'package:clothes_pos/data/repositories/adapters/sales_invoice_adapter.dart';
 import 'package:clothes_pos/presentation/attributes/bloc/attributes_cubit.dart';
+import 'package:clothes_pos/presentation/inventory/bloc/inventory_cubit.dart';
+import 'package:clothes_pos/presentation/inventory/bloc/stocktake_cubit.dart';
+import 'package:clothes_pos/presentation/inventory/bloc/stocktake_rfid_cubit.dart';
+import 'package:clothes_pos/data/datasources/held_sales_dao.dart';
+import 'package:clothes_pos/data/repositories/held_sales_repository.dart';
+import 'package:clothes_pos/core/barcode/barcode_label_print_service.dart';
+import 'package:clothes_pos/core/barcode/barcode_service.dart';
 
 void registerDataModules({bool registerAggregatedReports = true}) {
   // Product DAO & Repository
@@ -109,8 +119,37 @@ void registerDataModules({bool registerAggregatedReports = true}) {
     () => AttributeRepository(sl()),
   );
 
+  // Held Sales DAO & Repository (simple persistence for held cart snapshots)
+  sl.registerLazySingleton<HeldSalesDao>(
+    () => HeldSalesDao(sl<DatabaseHelper>()),
+  );
+  sl.registerLazySingleton<HeldSalesRepository>(
+    () => HeldSalesRepository(sl<HeldSalesDao>()),
+  );
+
+  // InvoiceRepository adapter binding
+  sl.registerLazySingleton<InvoiceRepository>(
+    () => SalesInvoiceAdapter(sl<SalesRepository>()),
+  );
+
+  // Sync service (local queue skeleton) now depends on InvoiceRepository
+  sl.registerLazySingleton<SyncService>(
+    () => LocalQueueSyncService(sl<DatabaseHelper>(), sl<InvoiceRepository>()),
+  );
+
   // Attributes Cubit
   sl.registerFactory<AttributesCubit>(() => AttributesCubit(sl()));
+
+  // Inventory Cubits
+  sl.registerFactory<InventoryCubit>(() => InventoryCubit());
+  sl.registerFactory<StocktakeCubit>(() => StocktakeCubit());
+  sl.registerFactory<StocktakeRfidCubit>(() => StocktakeRfidCubit());
+
+  // Barcode services
+  sl.registerLazySingleton<BarcodeService>(() => const BarcodeService());
+  sl.registerLazySingleton<BarcodeLabelPrintService>(
+    () => BarcodeLabelPrintService(),
+  );
 
   // Aggregated analytical reports (uses raw Database)
   // This is optional because it opens the database immediately. Tests that

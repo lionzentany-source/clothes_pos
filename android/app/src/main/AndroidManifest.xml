@@ -1,7 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
-        android:label="clothes_pos"
+        android:label="Clothes POS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

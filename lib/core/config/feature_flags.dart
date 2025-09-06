@@ -6,6 +6,8 @@
 ///  1. Test/runtime override via `setForTests(bool)`.
 ///  2. Environment variable `USE_DYNAMIC_ATTRIBUTES` (true/1/yes -> true).
 ///  3. Default `false`.
+library;
+
 import 'dart:io';
 
 class FeatureFlags {
@@ -20,7 +22,7 @@ class FeatureFlags {
       if (v == '1' || v == 'true' || v == 'yes') return true;
       return false;
     }
-    return false;
+    return true; // تم تفعيل إدارة خصائص المنتج افتراضياً
   }
 
   /// Backwards-compatible setter used in tests and existing code that assigns

@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
@@ -80,6 +81,33 @@ Future<void> main(List<String> args) async {
       dryRun,
       sampleLimit,
     );
+    // Optional: run attributes canonicalizer as part of the migration if requested
+    if (args.contains('--canonicalize')) {
+      // ignore: avoid_print$([Environment]::NewLine)
+      // ignore: avoid_print$([Environment]::NewLine)
+      print(
+        '[migrate_runner] Running attributes canonicalizer (dryRun=$dryRun sampleLimit=$sampleLimit)',
+      );
+      final procArgs = <String>['run', 'tool/canonicalize_attributes.dart'];
+      procArgs.add(dryRun ? '--dry-run' : '--commit');
+      if (sampleLimit != null) procArgs.add('--sample=$sampleLimit');
+      if (dbArg != null && dbArg.isNotEmpty) procArgs.add('--db=$dbArg');
+      // Ensure we run via `dart run` so the tool can use package imports
+      final res = await Process.run('dart', procArgs, runInShell: true);
+      if (res.stdout != null && (res.stdout as String).isNotEmpty) {
+        stdout.write(res.stdout);
+      }
+      if (res.stderr != null && (res.stderr as String).isNotEmpty) {
+        stderr.write(res.stderr);
+      }
+      if (res.exitCode != 0) {
+        print('[migrate_runner] canonicalize tool exited with ${res.exitCode}');
+        if (!dryRun) {
+          // propagate failure when committing
+          exit(res.exitCode);
+        }
+      }
+    }
     print('[migrate_runner] Completed. dryRun=$dryRun');
   } finally {
     await db.close();
@@ -161,6 +189,18 @@ Future<void> _migrateUniqueValues(
   bool dryRun,
   int? sampleLimit,
 ) async {
+  // Check whether the product_variants table still has this column.
+  final pragma = await db.rawQuery('PRAGMA table_info(product_variants)');
+  final hasColumn = pragma.any((c) {
+    final n = c['name'];
+    return n != null && n.toString().toLowerCase() == columnName.toLowerCase();
+  });
+  if (!hasColumn) {
+    print(
+      '[migrate_runner] Skipping $columnName: no such column on product_variants',
+    );
+    return;
+  }
   String sql;
   if (sampleLimit != null) {
     sql =
@@ -202,7 +242,7 @@ String _normalizeValue(String columnName, String v) {
   var s = v.trim();
   if (s.isEmpty) return s;
   // simple normalization: trim and collapse internal whitespace
-  s = s.replaceAll(RegExp(r"\s+"), ' ');
+  s = s.replaceAll(RegExp(r'\s+'), ' ');
   // For sizes, normalize common patterns
   if (columnName == 'size') {
     final lower = s.toLowerCase();
@@ -216,7 +256,7 @@ String _normalizeValue(String columnName, String v) {
     };
     if (sizeMap.containsKey(lower)) return sizeMap[lower]!;
     // numeric sizes: remove trailing .0
-    final numNorm = lower.replaceAll(RegExp(r"\.0+\$"), '');
+    final numNorm = lower.replaceAll(RegExp(r'\.0+\$'), '');
     return numNorm.toUpperCase();
   }
   // For color, simple canonicalization (trim + title-case)
@@ -242,9 +282,26 @@ Future<void> _linkVariantAttributes(
   bool dryRun,
   int? sampleLimit,
 ) async {
+  final pragma = await db.rawQuery('PRAGMA table_info(product_variants)');
+  final colsPresent = <String>{};
+  for (final c in pragma) {
+    final n = c['name'];
+    if (n != null) colsPresent.add(n.toString().toLowerCase());
+  }
+  final hasSize = colsPresent.contains('size');
+  final hasColor = colsPresent.contains('color');
+  if (!hasSize && !hasColor) {
+    print(
+      '[migrate_runner] Skipping variant linking: product_variants has neither size nor color columns',
+    );
+    return;
+  }
+  final queryColumns = <String>['id'];
+  if (hasSize) queryColumns.add('size');
+  if (hasColor) queryColumns.add('color');
   final variants = await db.query(
     'product_variants',
-    columns: ['id', 'size', 'color'],
+    columns: queryColumns,
     limit: sampleLimit,
   );
   print(

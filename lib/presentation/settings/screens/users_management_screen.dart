@@ -49,6 +49,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
       setState(() {
         _loading = false;
       });
+      if (!context.mounted) return; // safety
       await showCupertinoDialog(
         context: context,
         builder: (ctx) => CupertinoAlertDialog(
@@ -68,6 +69,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
   Future<void> _changePassword(int userId) async {
     final l = AppLocalizations.of(context);
     final ctrl = TextEditingController();
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
@@ -122,6 +124,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
     final current = await _repo.getUserRoleIds(userId);
     final selected = current.toSet();
     if (!mounted || !context.mounted) return;
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -196,6 +199,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
 
   Future<void> _deleteUser(AppUser u) async {
     final l = AppLocalizations.of(context);
+    if (!context.mounted) return; // safety
     final ok = await showCupertinoDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(

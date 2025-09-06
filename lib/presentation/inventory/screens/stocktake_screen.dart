@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 
 import 'package:flutter/cupertino.dart';
+import 'package:clothes_pos/presentation/pos/screens/advanced_product_search_screen.dart';
 import 'package:clothes_pos/presentation/inventory/bloc/stocktake_rfid_cubit.dart';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -11,7 +12,7 @@ import 'package:clothes_pos/data/models/inventory_item_row.dart';
 import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
 
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
 
@@ -64,6 +65,24 @@ class _StocktakeScreenState extends State<StocktakeScreen> {
                 placeholder: AppLocalizations.of(
                   context,
                 ).searchProductPlaceholder,
+                prefixIcon: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () => AdvancedProductSearchScreen.open(context),
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 4),
+                        child: Icon(
+                          CupertinoIcons.slider_horizontal_3,
+                          size: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(CupertinoIcons.search, size: 18),
+                    const SizedBox(width: 4),
+                  ],
+                ),
               ),
             ),
             BlocBuilder<StocktakeCubit, StocktakeState>(
@@ -229,17 +248,14 @@ class _StocktakeScreenState extends State<StocktakeScreen> {
                     ),
                     const SizedBox(width: 8),
                     ActionButton(
+                      key: const Key('stocktake-barcode-button'),
                       label: AppLocalizations.of(context).addByBarcode,
                       onPressed: () async {
                         try {
-                          final code = await FlutterBarcodeScanner.scanBarcode(
-                            '#ff6666',
-                            'إلغاء',
-                            true,
-                            ScanMode.BARCODE,
-                          );
+                          final result = await BarcodeScanner.scan();
                           if (!mounted || !context.mounted) return;
-                          if (code == '-1') return;
+                          final code = result.rawContent;
+                          if (code.isEmpty) return; // cancelled
                           // ابحث عن المتغير بالباركود وأضف وحدات حسب خيار المستخدم
                           final repo = sl<ProductRepository>();
                           final vs = await repo.searchVariants(

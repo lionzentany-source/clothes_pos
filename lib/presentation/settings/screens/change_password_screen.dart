@@ -56,6 +56,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       final newHash = await _hash(newPass);
       await _dao.updatePasswordHash(userId, newHash);
       if (!mounted) return;
+      if (!context.mounted) return; // safety
       await showCupertinoDialog(
         context: context,
         builder: (_) => const CupertinoAlertDialog(
@@ -77,6 +78,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   }
 
   Future<void> _showError(String msg) async {
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(

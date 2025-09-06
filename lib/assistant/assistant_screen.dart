@@ -231,6 +231,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   Future<void> _showNotUnderstoodAlert() async {
     if (!mounted) return;
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (_) => const CupertinoAlertDialog(
@@ -288,6 +289,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   await showTutorial(context, tutorialSteps);
                 } else {
                   // إذا تم إكمال جميع المهام، عرض رسالة تهنئة
+                  if (!context.mounted) return; // safety
                   await showCupertinoDialog(
                     context: context,
                     builder: (_) => CupertinoAlertDialog(
@@ -400,6 +402,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                           icon: const Icon(CupertinoIcons.question_circle),
                           onPressed: () {
                             // عرض مساعدة إضافية
+                            if (!context.mounted) return; // safety
                             showCupertinoDialog(
                               context: context,
                               builder: (_) => CupertinoAlertDialog(

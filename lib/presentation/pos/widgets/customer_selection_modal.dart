@@ -6,6 +6,7 @@ import 'package:clothes_pos/data/models/customer.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
 import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
 import 'package:clothes_pos/presentation/design/system/app_typography.dart';
+import 'package:clothes_pos/presentation/common/widgets/floating_modal.dart';
 import 'package:clothes_pos/core/logging/app_logger.dart';
 
 class CustomerSelectionModal extends StatefulWidget {
@@ -23,9 +24,11 @@ class CustomerSelectionModal extends StatefulWidget {
     Customer? currentCustomer,
     required Function(Customer?) onCustomerSelected,
   }) {
-    return showCupertinoModalPopup(
+    return FloatingModal.showWithSize<void>(
       context: context,
-      builder: (context) => CustomerSelectionModal(
+      title: 'اختيار العميل',
+      size: ModalSize.medium,
+      child: CustomerSelectionModal(
         currentCustomer: currentCustomer,
         onCustomerSelected: onCustomerSelected,
       ),
@@ -176,6 +179,7 @@ class _CustomerSelectionModalState extends State<CustomerSelectionModal> {
   }
 
   void _showErrorDialog(String title, String message) {
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -193,27 +197,13 @@ class _CustomerSelectionModalState extends State<CustomerSelectionModal> {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: CupertinoNavigationBar(
-        middle: const Text('اختيار العميل'),
-        leading: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('إلغاء'),
-        ),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          onPressed: _showAddCustomerDialog,
-          child: const Text('إضافة'),
-        ),
-      ),
-      child: SafeArea(
-        child: Column(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Action buttons row
+        Row(
           children: [
-            // Clear customer option
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(AppSpacing.md),
+            Expanded(
               child: CupertinoButton.filled(
                 onPressed: () {
                   widget.onCustomerSelected(null);
@@ -222,130 +212,133 @@ class _CustomerSelectionModalState extends State<CustomerSelectionModal> {
                 child: const Text('بيع بدون عميل'),
               ),
             ),
-
-            // Search bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-              child: CupertinoTextField(
-                controller: _searchController,
-                placeholder: 'البحث عن عميل...',
-                prefix: const Padding(
-                  padding: EdgeInsets.only(left: 8.0),
-                  child: Icon(CupertinoIcons.search),
-                ),
-                suffix: _searchQuery.isNotEmpty
-                    ? CupertinoButton(
-                        padding: EdgeInsets.zero,
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                        child: const Icon(CupertinoIcons.clear),
-                      )
-                    : null,
-              ),
-            ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            // Customer count
-            if (!_loading)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: Row(
-                  children: [
-                    Text(
-                      'العملاء: ${_customers.length}',
-                      style: const TextStyle(
-                        fontSize: AppTypography.fs12,
-                        color: CupertinoColors.systemGrey,
-                      ),
-                    ),
-                    if (_searchQuery.isNotEmpty) ...[
-                      const Text(
-                        ' • ',
-                        style: TextStyle(color: CupertinoColors.systemGrey),
-                      ),
-                      Text(
-                        'النتائج: ${_filteredCustomers.length}',
-                        style: const TextStyle(
-                          fontSize: AppTypography.fs12,
-                          color: CupertinoColors.systemGrey,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-            const SizedBox(height: AppSpacing.sm),
-
-            // Customer list
-            Expanded(
-              child: _loading
-                  ? const Center(child: CupertinoActivityIndicator())
-                  : _filteredCustomers.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            CupertinoIcons.person_2,
-                            size: 64,
-                            color: CupertinoColors.systemGrey,
-                          ),
-                          const SizedBox(height: AppSpacing.md),
-                          Text(
-                            _searchQuery.isNotEmpty
-                                ? 'لا توجد نتائج للبحث'
-                                : 'لا يوجد عملاء مسجلين',
-                            style: const TextStyle(
-                              fontSize: AppTypography.fs16,
-                              color: CupertinoColors.systemGrey,
-                            ),
-                          ),
-                          if (_searchQuery.isEmpty) ...[
-                            const SizedBox(height: AppSpacing.sm),
-                            CupertinoButton.filled(
-                              onPressed: _showAddCustomerDialog,
-                              child: const Text('إضافة أول عميل'),
-                            ),
-                          ],
-                        ],
-                      ),
-                    )
-                  : ListView.separated(
-                      itemCount: _filteredCustomers.length,
-                      separatorBuilder: (context, index) => Container(
-                        height: 0.5,
-                        color: CupertinoColors.separator,
-                      ),
-                      itemBuilder: (context, index) {
-                        final customer = _filteredCustomers[index];
-                        final isSelected =
-                            widget.currentCustomer?.id == customer.id;
-
-                        return CupertinoListTile(
-                          title: Text(customer.name),
-                          subtitle: customer.phoneNumber != null
-                              ? Text(customer.phoneNumber!)
-                              : const Text('لا يوجد رقم هاتف'),
-                          trailing: isSelected
-                              ? const Icon(
-                                  CupertinoIcons.checkmark_circle_fill,
-                                  color: CupertinoColors.activeGreen,
-                                )
-                              : null,
-                          onTap: () {
-                            widget.onCustomerSelected(customer);
-                            Navigator.of(context).pop();
-                          },
-                        );
-                      },
-                    ),
+            const SizedBox(width: AppSpacing.sm),
+            CupertinoButton.filled(
+              onPressed: _showAddCustomerDialog,
+              child: const Text('إضافة عميل'),
             ),
           ],
         ),
-      ),
+
+        const SizedBox(height: AppSpacing.sm),
+
+        // Search bar
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+          child: CupertinoTextField(
+            controller: _searchController,
+            placeholder: 'البحث عن عميل...',
+            prefix: const Padding(
+              padding: EdgeInsets.only(left: 8.0),
+              child: Icon(CupertinoIcons.search),
+            ),
+            suffix: _searchQuery.isNotEmpty
+                ? CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () {
+                      _searchController.clear();
+                    },
+                    child: const Icon(CupertinoIcons.clear),
+                  )
+                : null,
+          ),
+        ),
+
+        const SizedBox(height: AppSpacing.sm),
+
+        // Customer count
+        if (!_loading)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              children: [
+                Text(
+                  'العملاء: ${_customers.length}',
+                  style: const TextStyle(
+                    fontSize: AppTypography.fs12,
+                    color: CupertinoColors.systemGrey,
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty) ...[
+                  const Text(
+                    ' • ',
+                    style: TextStyle(color: CupertinoColors.systemGrey),
+                  ),
+                  Text(
+                    'النتائج: ${_filteredCustomers.length}',
+                    style: const TextStyle(
+                      fontSize: AppTypography.fs12,
+                      color: CupertinoColors.systemGrey,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+        const SizedBox(height: AppSpacing.sm),
+
+        // Customer list
+        Flexible(
+          child: SizedBox(
+            height: 300, // حدد ارتفاع ثابت أصغر
+            child: _loading
+                ? const Center(child: CupertinoActivityIndicator())
+                : _filteredCustomers.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          CupertinoIcons.person_2,
+                          size: 48,
+                          color: CupertinoColors.systemGrey,
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Text(
+                          _searchQuery.isNotEmpty
+                              ? 'لا توجد نتائج للبحث'
+                              : 'لا يوجد عملاء مسجلين',
+                          style: const TextStyle(
+                            fontSize: AppTypography.fs14,
+                            color: CupertinoColors.systemGrey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    itemCount: _filteredCustomers.length,
+                    separatorBuilder: (context, index) => Container(
+                      height: 0.5,
+                      color: CupertinoColors.separator,
+                    ),
+                    itemBuilder: (context, index) {
+                      final customer = _filteredCustomers[index];
+                      final isSelected =
+                          widget.currentCustomer?.id == customer.id;
+
+                      return CupertinoListTile(
+                        title: Text(customer.name),
+                        subtitle: customer.phoneNumber != null
+                            ? Text(customer.phoneNumber!)
+                            : const Text('لا يوجد رقم هاتف'),
+                        trailing: isSelected
+                            ? const Icon(
+                                CupertinoIcons.checkmark_circle_fill,
+                                color: CupertinoColors.activeGreen,
+                              )
+                            : null,
+                        onTap: () {
+                          widget.onCustomerSelected(customer);
+                          Navigator.of(context).pop();
+                        },
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
     );
   }
 }

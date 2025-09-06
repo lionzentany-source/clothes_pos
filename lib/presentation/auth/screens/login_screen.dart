@@ -173,7 +173,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // New dialog for success messages
   void _showSuccessDialog(BuildContext context, String title, String message) {
-    showCupertinoDialog(
+  if (!context.mounted) return; // safety
+  showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -190,7 +191,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showErrorDialog(BuildContext context, String title, String message) {
-    showCupertinoDialog(
+  if (!context.mounted) return; // safety
+  showCupertinoDialog(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),

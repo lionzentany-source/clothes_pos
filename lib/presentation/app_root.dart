@@ -9,6 +9,7 @@ import 'package:clothes_pos/presentation/auth/screens/login_screen.dart';
 import 'package:clothes_pos/presentation/reports/screens/reports_home_screen.dart';
 import 'package:clothes_pos/presentation/settings/screens/settings_home_screen.dart';
 import 'package:clothes_pos/presentation/inventory/screens/inventory_home_screen.dart';
+import 'package:clothes_pos/presentation/design/system/adaptive_layout.dart';
 
 // AppRoot now provides a simple tab scaffold with main app sections.
 class AppRoot extends StatelessWidget {
@@ -30,53 +31,67 @@ class AppRoot extends StatelessWidget {
         }
 
         // Authenticated: show main tab scaffold
-        return ScaffoldMessenger(
-          child: CupertinoTabScaffold(
-            tabBar: CupertinoTabBar(
-              items: const [
-                BottomNavigationBarItem(
-                  icon: Icon(CupertinoIcons.home),
-                  label: 'المبيعات',
+        return AdaptiveLayoutBuilder(
+          builder: (context, isTablet, isDesktop) {
+            return ScaffoldMessenger(
+              child: CupertinoTabScaffold(
+                tabBar: CupertinoTabBar(
+                  // Use larger icons for iPad
+                  iconSize: isTablet ? 30 : 24,
+                  items: [
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.home),
+                      label: 'المبيعات',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.square_list),
+                      label: 'المخزون',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.back),
+                      label: 'المرتجعات',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.chart_bar),
+                      label: 'التقارير',
+                    ),
+                    BottomNavigationBarItem(
+                      icon: Icon(CupertinoIcons.settings),
+                      label: 'الإعدادات',
+                    ),
+                  ],
                 ),
-                BottomNavigationBarItem(
-                  icon: Icon(CupertinoIcons.square_list),
-                  label: 'المخزون',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(CupertinoIcons.back),
-                  label: 'المرتجعات',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(CupertinoIcons.chart_bar),
-                  label: 'التقارير',
-                ),
-                BottomNavigationBarItem(
-                  icon: Icon(CupertinoIcons.settings),
-                  label: 'الإعدادات',
-                ),
-              ],
-            ),
-            tabBuilder: (context, index) {
-              switch (index) {
-                case 0:
-                  return CupertinoTabView(builder: (_) => const PosScreen());
-                case 1:
-                  return CupertinoTabView(
-                    builder: (_) => InventoryHomeScreen(),
-                  );
-                case 2:
-                  return CupertinoTabView(
-                    builder: (_) => const ReturnsScreen(),
-                  );
-                case 3:
-                  return CupertinoTabView(builder: (_) => ReportsHomeScreen());
-                case 4:
-                  return CupertinoTabView(builder: (_) => SettingsHomeScreen());
-                default:
-                  return CupertinoTabView(builder: (_) => const PosScreen());
-              }
-            },
-          ),
+                tabBuilder: (context, index) {
+                  switch (index) {
+                    case 0:
+                      return CupertinoTabView(
+                        builder: (_) => const PosScreen(),
+                      );
+                    case 1:
+                      return CupertinoTabView(
+                        builder: (_) => InventoryHomeScreen(),
+                      );
+                    case 2:
+                      return CupertinoTabView(
+                        builder: (_) => const ReturnsScreen(),
+                      );
+                    case 3:
+                      return CupertinoTabView(
+                        builder: (_) => ReportsHomeScreen(),
+                      );
+                    case 4:
+                      return CupertinoTabView(
+                        builder: (_) => SettingsHomeScreen(),
+                      );
+                    default:
+                      return CupertinoTabView(
+                        builder: (_) => const PosScreen(),
+                      );
+                  }
+                },
+              ),
+            );
+          },
         );
       },
     );

@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
@@ -10,7 +11,7 @@ String _stamp() {
 String normalizeValue(String columnName, String v) {
   var s = v.trim();
   if (s.isEmpty) return s;
-  s = s.replaceAll(RegExp(r"\s+"), ' ');
+  s = s.replaceAll(RegExp(r'\s+'), ' ');
   if (columnName == 'size') {
     final lower = s.toLowerCase();
     final sizeMap = {
@@ -22,7 +23,7 @@ String normalizeValue(String columnName, String v) {
       'l': 'L',
     };
     if (sizeMap.containsKey(lower)) return sizeMap[lower]!;
-    final numNorm = lower.replaceAll(RegExp(r"\.0+\$"), '');
+    final numNorm = lower.replaceAll(RegExp(r'\.0+\$'), '');
     return numNorm.toUpperCase();
   }
   if (columnName == 'color') {
@@ -101,8 +102,8 @@ Future<void> main(List<String> args) async {
           final s = v;
           // JSON key patterns
           final jsonSize = RegExp(
-            r'"size"\s*:\s*"([^"]+)"'
-            , caseSensitive: false,
+            r'"size"\s*:\s*"([^"]+)"',
+            caseSensitive: false,
           ).firstMatch(s);
           if (jsonSize != null) {
             extractedSizes
@@ -110,8 +111,8 @@ Future<void> main(List<String> args) async {
                 .add(jsonSize.group(1)!.trim());
           }
           final jsonColor = RegExp(
-            r'"color"\s*:\s*"([^"]+)"'
-            , caseSensitive: false,
+            r'"color"\s*:\s*"([^"]+)"',
+            caseSensitive: false,
           ).firstMatch(s);
           if (jsonColor != null) {
             extractedColors
@@ -163,7 +164,7 @@ Future<void> main(List<String> args) async {
               }
               // heuristics: if token matches known size words
               final low = tkn.toLowerCase();
-              if ([ 
+              if ([
                 's',
                 'm',
                 'l',
@@ -177,7 +178,7 @@ Future<void> main(List<String> args) async {
                 extractedSizes
                     .putIfAbsent('$table.$colName', () => {})
                     .add(tkn);
-              } else if ([ 
+              } else if ([
                 'red',
                 'blue',
                 'green',

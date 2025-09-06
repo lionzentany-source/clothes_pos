@@ -44,10 +44,18 @@ class _ProductsPageState extends State<ProductsPage> {
 
   Future<void> fetchData() async {
     try {
-      final prodRes = await http.get(Uri.parse('http://localhost:8080/products'));
-      final catRes = await http.get(Uri.parse('http://localhost:8080/categories'));
-      final offersRes = await http.get(Uri.parse('http://localhost:8080/offers'));
-      if (prodRes.statusCode != 200 || catRes.statusCode != 200 || offersRes.statusCode != 200) {
+      final prodRes = await http.get(
+        Uri.parse('http://localhost:8080/products'),
+      );
+      final catRes = await http.get(
+        Uri.parse('http://localhost:8080/categories'),
+      );
+      final offersRes = await http.get(
+        Uri.parse('http://localhost:8080/offers'),
+      );
+      if (prodRes.statusCode != 200 ||
+          catRes.statusCode != 200 ||
+          offersRes.statusCode != 200) {
         setState(() {
           errorMsg = 'تعذر تحميل البيانات من السيرفر. تأكد أن السيرفر يعمل.';
           loading = false;
@@ -77,7 +85,10 @@ class _ProductsPageState extends State<ProductsPage> {
       return Scaffold(
         appBar: AppBar(title: const Text('المتجر الإلكتروني')),
         body: Center(
-          child: Text(errorMsg!, style: const TextStyle(color: Colors.red, fontSize: 18)),
+          child: Text(
+            errorMsg!,
+            style: const TextStyle(color: Colors.red, fontSize: 18),
+          ),
         ),
       );
     }
@@ -182,10 +193,12 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     );
     final data = jsonDecode(res.body);
     if (data['token'] != null) {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const AdminDashboard()),
       );
     } else {
+      if (!mounted) return;
       setState(() => _error = 'بيانات الدخول غير صحيحة');
     }
   }

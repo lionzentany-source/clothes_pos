@@ -168,8 +168,7 @@ class OpenAiCompatibleClient implements IAiClient {
     required AiSettings settings,
     required List<Map<String, String>> messages,
     String? requestId,
-  }) async*
-{
+  }) async* {
     if (!settings.isValid) {
       throw AiException('إعدادات الذكاء الاصطناعي غير صحيحة');
     }
@@ -250,7 +249,7 @@ class OpenAiCompatibleClient implements IAiClient {
 
       if (data != null) {
         return data
-            .where((model) => model is Map<String, dynamic>)
+            .whereType<Map<String, dynamic>>()
             .map((model) => model['id']?.toString() ?? '')
             .where((id) => id.isNotEmpty)
             .toList();
@@ -365,8 +364,7 @@ class OpenAiCompatibleClient implements IAiClient {
 
   void _addHeaders(
     HttpClientRequest request,
-    AiSettings settings,
-    {
+    AiSettings settings, {
     String? requestId,
   }) {
     if (settings.apiKey != null && settings.apiKey!.isNotEmpty) {
@@ -386,8 +384,7 @@ class OpenAiCompatibleClient implements IAiClient {
 
   Map<String, dynamic> _buildRequestBody(
     List<Map<String, String>> messages,
-    AiSettings settings,
-    {
+    AiSettings settings, {
     bool stream = false,
   }) {
     return {

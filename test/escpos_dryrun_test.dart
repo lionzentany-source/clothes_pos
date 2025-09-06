@@ -39,8 +39,11 @@ void main() {
     );
 
     final hex = bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
+    // ignore: avoid_print
     print('\n=== ESC/POS DRY-RUN (${bytes.length} bytes) ===');
+    // ignore: avoid_print
     print(hex);
+    // ignore: avoid_print
     print('=== END DRY-RUN ===\n');
 
     expect(bytes, isNotEmpty);

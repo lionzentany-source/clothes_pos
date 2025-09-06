@@ -1310,6 +1310,54 @@ abstract class AppLocalizations {
   /// **'Backup Failed'**
   String get backupFailed;
 
+  /// No description provided for @clearCartConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear cart?'**
+  String get clearCartConfirmation;
+
+  /// No description provided for @cartCleared.
+  ///
+  /// In en, this message translates to:
+  /// **'Cart cleared'**
+  String get cartCleared;
+
+  /// No description provided for @saleHeld.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale held'**
+  String get saleHeld;
+
+  /// No description provided for @heldSalesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Held sales'**
+  String get heldSalesTitle;
+
+  /// No description provided for @noHeldSales.
+  ///
+  /// In en, this message translates to:
+  /// **'No held sales'**
+  String get noHeldSales;
+
+  /// No description provided for @holdNamePlaceholder.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold name (optional)'**
+  String get holdNamePlaceholder;
+
+  /// No description provided for @restoreSale.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore'**
+  String get restoreSale;
+
+  /// No description provided for @holdSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale held'**
+  String get holdSaved;
+
   /// No description provided for @enterDbPathFirst.
   ///
   /// In en, this message translates to:
@@ -1555,6 +1603,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Value deleted'**
   String get valueDeleted;
+
+  /// No description provided for @clearCart.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clearCart;
+
+  /// No description provided for @holdCart.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold'**
+  String get holdCart;
+
+  /// No description provided for @waitingSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting Sales'**
+  String get waitingSales;
+
+  /// No description provided for @returnService.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Service'**
+  String get returnService;
+
+  /// No description provided for @returnProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Product'**
+  String get returnProduct;
+
+  /// No description provided for @returnFullInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Full Invoice'**
+  String get returnFullInvoice;
+
+  /// No description provided for @returnType.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Type'**
+  String get returnType;
+
+  /// No description provided for @selectReturnType.
+  ///
+  /// In en, this message translates to:
+  /// **'Select return type'**
+  String get selectReturnType;
+
+  /// No description provided for @saleIdLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale ID'**
+  String get saleIdLabel;
+
+  /// No description provided for @returnReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Return reason'**
+  String get returnReason;
+
+  /// No description provided for @returnReasonOptional.
+  ///
+  /// In en, this message translates to:
+  /// **'Return reason (optional)'**
+  String get returnReasonOptional;
+
+  /// No description provided for @returnSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Completed'**
+  String get returnSuccessTitle;
+
+  /// No description provided for @returnSuccessMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Return has been processed successfully'**
+  String get returnSuccessMessage;
+
+  /// No description provided for @returnItemsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Items'**
+  String get returnItemsTitle;
+
+  /// No description provided for @noReturnableItems.
+  ///
+  /// In en, this message translates to:
+  /// **'No returnable items found'**
+  String get noReturnableItems;
+
+  /// No description provided for @returnQty.
+  ///
+  /// In en, this message translates to:
+  /// **'Return Qty'**
+  String get returnQty;
+
+  /// No description provided for @unitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit Price'**
+  String get unitPrice;
+
+  /// No description provided for @totalRefund.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Refund'**
+  String get totalRefund;
+
+  /// No description provided for @processReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Process Return'**
+  String get processReturn;
 }
 
 class _AppLocalizationsDelegate

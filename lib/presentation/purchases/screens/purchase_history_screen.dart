@@ -219,7 +219,7 @@ class _PurchaseDetailsScreenState extends State<PurchaseDetailsScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
           ],
         ),
       ),

@@ -8,8 +8,17 @@ import 'package:clothes_pos/core/di/locator.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
+import 'package:clothes_pos/services/sync_service.dart';
 
 part 'pos_state.dart';
+
+/// Result for barcode/rfid resolution so callers can add to CartCubit safely
+/// without relying on PosCubit.state changes.
+class ResolvedVariant {
+  final int id;
+  final double price;
+  ResolvedVariant(this.id, this.price);
+}
 
 class PosCubit extends Cubit<PosState> {
   ProductRepository get products => _products;
@@ -229,6 +238,7 @@ class PosCubit extends Cubit<PosState> {
     required List<Payment> payments,
     int userId = 1,
     int? customerId,
+    List<SaleItem>? itemsOverride,
   }) async {
     if (state.cart.isEmpty) {
       // Using English key fallback; actual localization should be handled at UI layer.
@@ -242,20 +252,22 @@ class PosCubit extends Cubit<PosState> {
       totalAmount: 0,
       saleDate: DateTime.now(),
     );
-    final items = state.cart
-        .map(
-          (l) => SaleItem(
-            saleId: 0,
-            variantId: l.variantId,
-            quantity: l.quantity,
-            pricePerUnit: l.price,
-            costAtSale: 0,
-            discountAmount: l.discountAmount,
-            taxAmount: l.taxAmount,
-            note: l.note,
-          ),
-        )
-        .toList();
+    final items =
+        itemsOverride ??
+        state.cart
+            .map(
+              (l) => SaleItem(
+                saleId: 0,
+                variantId: l.variantId,
+                quantity: l.quantity,
+                pricePerUnit: l.price,
+                costAtSale: 0,
+                discountAmount: l.discountAmount,
+                taxAmount: l.taxAmount,
+                note: l.note,
+              ),
+            )
+            .toList();
 
     try {
       // Fill costAtSale from current variant cost
@@ -280,33 +292,57 @@ class PosCubit extends Cubit<PosState> {
         }
       } catch (_) {}
 
-      final saleId = await _sales.createSale(
-        sale: sale,
-        items: items,
-        payments: payments,
-      );
-      emit(state.copyWith(cart: const [], checkingOut: false));
-      // إعادة تحميل نتائج البحث مباشرة بعد البيع
-      await search(state.query, categoryId: state.selectedCategoryId);
-      return saleId;
+      try {
+        final saleId = await _sales.createSale(
+          sale: sale,
+          items: items,
+          payments: payments,
+        );
+        emit(state.copyWith(cart: const [], checkingOut: false));
+        // إعادة تحميل نتائج البحث مباشرة بعد البيع
+        await search(state.query, categoryId: state.selectedCategoryId);
+        return saleId;
+      } catch (e) {
+        // Likely offline or backend error — enqueue payload for later sync
+        try {
+          final payload = {
+            'sale': sale.toMap(),
+            'items': items.map((i) => i.toMap()).toList(),
+            'payments': payments.map((p) => p.toMap()).toList(),
+          };
+          // Use DI locator to access SyncService
+          try {
+            final sync = sl<SyncService>();
+            await sync.enqueueInvoice(payload.cast<String, Object?>());
+          } catch (_) {
+            // if SyncService not registered, swallow
+          }
+          // Clear cart locally and return sentinel id (-1) indicating queued
+          emit(state.copyWith(cart: const [], checkingOut: false));
+          await search(state.query, categoryId: state.selectedCategoryId);
+          return -1;
+        } catch (_) {
+          rethrow;
+        }
+      }
     } finally {
       emit(state.copyWith(checkingOut: false));
     }
   }
 
-  Future<bool> addByBarcode(String barcode) async {
+  /// Resolve a barcode to a variant id & price without mutating cart.
+  /// Returns null when nothing matched.
+  Future<ResolvedVariant?> addByBarcode(String barcode) async {
     final variants = await _products.searchVariants(barcode: barcode, limit: 5);
-    if (variants.isEmpty) return false;
+    if (variants.isEmpty) return null;
     final v = variants.first;
-    addToCart(v.id!, v.salePrice);
-    return true;
+    return ResolvedVariant(v.id!, v.salePrice);
   }
 
-  Future<bool> addByRfid(String epc) async {
+  Future<ResolvedVariant?> addByRfid(String epc) async {
     final variants = await _products.searchVariants(rfidTag: epc, limit: 1);
-    if (variants.isEmpty) return false;
+    if (variants.isEmpty) return null;
     final v = variants.first;
-    addToCart(v.id!, v.salePrice);
-    return true;
+    return ResolvedVariant(v.id!, v.salePrice);
   }
 }

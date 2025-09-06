@@ -1,9 +1,12 @@
+// ignore_for_file: use_build_context_synchronously
 import 'package:clothes_pos/presentation/inventory/bloc/inventory_cubit.dart';
 import 'package:clothes_pos/data/models/inventory_item_row.dart';
 import 'package:clothes_pos/presentation/common/money.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:clothes_pos/presentation/pos/screens/advanced_product_search_screen.dart';
 import 'product_editor_screen.dart';
 import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
+import 'package:clothes_pos/presentation/common/widgets/floating_modal.dart';
 
 import 'package:clothes_pos/presentation/purchases/screens/purchase_editor_screen.dart';
 import 'package:clothes_pos/presentation/purchases/screens/purchase_history_screen.dart';
@@ -28,7 +31,16 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<InventoryCubit>().load();
+    // Trigger an initial load for widget tests and direct screen usage
+    // without going through the home wrapper.
+    // Safe to schedule after first frame to avoid context issues.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<InventoryCubit>().load(
+        query: _controller.text,
+        brandId: context.read<InventoryCubit>().state.brandId,
+      );
+    });
   }
 
   @override
@@ -68,18 +80,26 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                             actions.add(
                               CupertinoActionSheetAction(
                                 onPressed: () async {
-                                  Navigator.of(sheetCtx).pop();
+                                  // Capture dependencies before async gaps
                                   final cubit = context.read<InventoryCubit>();
                                   final q = _controller.text;
-                                  final refreshed = await Navigator.of(context)
-                                      .push(
-                                        CupertinoPageRoute(
-                                          builder: (_) =>
-                                              const ProductEditorScreen(),
-                                        ),
-                                      );
-                                  if (!mounted) return;
-                                  if (refreshed == true) cubit.load(query: q);
+                                  Navigator.of(sheetCtx).pop();
+                                  // Defer to next microtask to let the sheet fully close
+                                  Future.microtask(() async {
+                                    if (!mounted) return;
+                                    final refreshed =
+                                        await FloatingModal.showWithSize<bool>(
+                                          context: context,
+                                          title: 'محرر المنتج',
+                                          size: ModalSize.large,
+                                          scrollable: false,
+                                          child: const ProductEditorScreen(
+                                            showPrintAction: true,
+                                          ),
+                                        );
+                                    if (!mounted) return;
+                                    if (refreshed == true) cubit.load(query: q);
+                                  });
                                 },
                                 child: Text(l.addItem),
                               ),
@@ -89,18 +109,23 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                             actions.add(
                               CupertinoActionSheetAction(
                                 onPressed: () async {
-                                  Navigator.of(sheetCtx).pop();
+                                  // Capture dependencies before async gaps
+                                  final nav = Navigator.of(context);
                                   final cubit = context.read<InventoryCubit>();
                                   final q = _controller.text;
-                                  final refreshed = await Navigator.of(context)
-                                      .push(
-                                        CupertinoPageRoute(
-                                          builder: (_) =>
-                                              const PurchaseEditorScreen(),
-                                        ),
-                                      );
-                                  if (!mounted) return;
-                                  if (refreshed == true) cubit.load(query: q);
+                                  Navigator.of(sheetCtx).pop();
+                                  // Defer navigation until after sheet is fully dismissed
+                                  Future.microtask(() async {
+                                    if (!mounted) return;
+                                    final refreshed = await nav.push(
+                                      CupertinoPageRoute(
+                                        builder: (_) =>
+                                            const PurchaseEditorScreen(),
+                                      ),
+                                    );
+                                    if (!mounted) return;
+                                    if (refreshed == true) cubit.load(query: q);
+                                  });
                                 },
                                 child: Text(l.purchaseInvoiceTitle),
                               ),
@@ -109,13 +134,19 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                           actions.add(
                             CupertinoActionSheetAction(
                               onPressed: () async {
+                                // Capture Navigator before async gap
+                                final nav = Navigator.of(context);
                                 Navigator.of(sheetCtx).pop();
-                                await Navigator.of(context).push(
-                                  CupertinoPageRoute(
-                                    builder: (_) =>
-                                        const PurchaseHistoryScreen(),
-                                  ),
-                                );
+                                // Defer navigation to next microtask after sheet closes
+                                Future.microtask(() async {
+                                  if (!mounted) return;
+                                  await nav.push(
+                                    CupertinoPageRoute(
+                                      builder: (_) =>
+                                          const PurchaseHistoryScreen(),
+                                    ),
+                                  );
+                                });
                               },
                               child: Text(l.purchasesTotalPeriod),
                             ),
@@ -160,6 +191,25 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                     placeholder: AppLocalizations.of(
                       context,
                     ).searchProductPlaceholder,
+                    prefixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        GestureDetector(
+                          onTap: () =>
+                              AdvancedProductSearchScreen.open(context),
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 4),
+                            child: Icon(
+                              CupertinoIcons.slider_horizontal_3,
+                              size: 18,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Icon(CupertinoIcons.search, size: 18),
+                        const SizedBox(width: 4),
+                      ],
+                    ),
                   ),
                 ),
                 Padding(
@@ -204,14 +254,18 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                             canAdjust: canAdjust,
                             onTap: () async {
                               if (!canAdjust) return;
+                              // Capture dependencies before awaiting
                               final cubit = context.read<InventoryCubit>();
                               final q = _controller.text;
-                              final refreshed = await Navigator.of(context)
-                                  .push(
-                                    CupertinoPageRoute(
-                                      builder: (_) => ProductEditorScreen(
-                                        parentId: row.variant.parentProductId,
-                                      ),
+                              final refreshed =
+                                  await FloatingModal.showWithSize<bool>(
+                                    context: context,
+                                    title: 'محرر المنتج',
+                                    size: ModalSize.large,
+                                    scrollable: false,
+                                    child: ProductEditorScreen(
+                                      parentId: row.variant.parentProductId,
+                                      showPrintAction: true,
                                     ),
                                   );
                               if (!mounted) return;
@@ -257,8 +311,9 @@ class _InventoryRow extends StatelessWidget {
     if ((v.size ?? '').isNotEmpty) parts.add('${l.sizeLabel} ${v.size}');
     if ((v.color ?? '').isNotEmpty) parts.add('${l.colorLabel} ${v.color}');
     parts.add('${l.skuLabel} ${v.sku ?? ''}');
-    if ((v.barcode ?? '').isNotEmpty)
+    if ((v.barcode ?? '').isNotEmpty) {
       parts.add('${l.barcodeLabel} ${v.barcode}');
+    }
     final subtitle = parts.join('  •  ');
     final qty =
         '${l.quantityLabel} ${v.quantity} - ${l.priceLabel} ${money(context, v.salePrice)}';

@@ -1,5 +1,6 @@
 import 'package:clothes_pos/presentation/returns/screens/return_sale_detail_screen.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:clothes_pos/presentation/pos/screens/advanced_product_search_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/returns/bloc/returns_cubit.dart';
 import 'package:clothes_pos/data/repositories/sales_repository.dart';
@@ -49,6 +50,21 @@ class _ReturnsViewState extends State<ReturnsView> {
               onChanged: (value) {
                 context.read<ReturnsCubit>().searchSales(value);
               },
+              prefixIcon: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  GestureDetector(
+                    onTap: () => AdvancedProductSearchScreen.open(context),
+                    child: const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(CupertinoIcons.slider_horizontal_3, size: 18),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(CupertinoIcons.search, size: 18),
+                  const SizedBox(width: 4),
+                ],
+              ),
             ),
           ),
           Expanded(

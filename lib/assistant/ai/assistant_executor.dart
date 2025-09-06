@@ -107,17 +107,38 @@ class AssistantExecutor {
   }
 
   Future<String> _handleAnalyzeRootCause(AnalyzeRootCauseAction action) async {
-    // TODO: Implement actual root cause analysis logic.
-    // This would involve querying various data points around the event date.
-    return 'جاري تحليل السبب الجذري للحدث: ${action.eventDescription} بتاريخ ${action.date}.';
+    // Minimal heuristic root-cause summary using recent sales/returns on the day
+    final db = await dbHelper.database;
+    final parsed = DateTime.tryParse(action.date) ?? DateTime.now();
+    final dayStart = DateTime(parsed.year, parsed.month, parsed.day);
+    final dayEnd = dayStart
+        .add(const Duration(days: 1))
+        .subtract(const Duration(seconds: 1));
+    final sIso = dayStart.toIso8601String();
+    final eIso = dayEnd.toIso8601String();
+    final sales = await db.rawQuery(
+      'SELECT COUNT(*) as c FROM sales WHERE datetime(sale_date) >= datetime(?) AND datetime(sale_date) <= datetime(?)',
+      [sIso, eIso],
+    );
+    final returnsRows = await db.rawQuery(
+      "SELECT COUNT(*) as c FROM payments WHERE method = 'REFUND' AND datetime(created_at) >= datetime(?) AND datetime(created_at) <= datetime(?)",
+      [sIso, eIso],
+    );
+    final salesCount = (sales.first['c'] as num?)?.toInt() ?? 0;
+    final returnsCount = (returnsRows.first['c'] as num?)?.toInt() ?? 0;
+    final hypothesis = returnsCount > (salesCount * 0.2)
+        ? 'ارتفاع غير معتاد في المرتجعات قد يكون سبباً رئيسياً.'
+        : 'لا توجد مؤشرات واضحة من المبيعات/المرتجعات في ذلك اليوم.';
+    return 'تحليل مبدئي للسبب الجذري للحدث "${action.eventDescription}":\n- عدد العمليات في اليوم: $salesCount\n- عدد المرتجعات: $returnsCount\nالاستنتاج: $hypothesis';
   }
 
   Future<String> _handleGenerateProductDescription(
     GenerateProductDescriptionAction action,
   ) async {
-    // TODO: Implement actual description generation logic.
-    // This could call a separate, more creative AI model or use templates.
-    return 'سأقوم بإنشاء وصف تسويقي للمنتج: ${action.productName} باستخدام الكلمات المفتاحية: ${action.keywords.join(', ')}.';
+    // Lightweight templated description using provided keywords
+    final kws = action.keywords.where((k) => k.trim().isNotEmpty).toList();
+    final features = kws.isNotEmpty ? '، بميزات: ${kws.join('، ')}' : '';
+    return 'تعرف على ${action.productName}$features. صُمم بعناية ليلائم احتياجاتك اليومية ويوفر قيمة ممتازة مقابل السعر.';
   }
 
   Future<String> _handleCustomerSearch(SearchCustomerAction action) async {

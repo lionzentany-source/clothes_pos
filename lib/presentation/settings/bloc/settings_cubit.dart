@@ -10,6 +10,7 @@ class SettingsState extends Equatable {
   final String? facebookPageAccessToken;
   final String? facebookVerifyToken;
   final String? facebookPageId;
+  final bool showProductCardImage; // Toggle for showing product images in POS
 
   const SettingsState({
     required this.currency,
@@ -17,6 +18,7 @@ class SettingsState extends Equatable {
     this.facebookPageAccessToken,
     this.facebookVerifyToken,
     this.facebookPageId,
+    this.showProductCardImage = true, // default to showing images
   });
 
   // Locale fixed to Arabic (app is Arabic-only now)
@@ -28,24 +30,26 @@ class SettingsState extends Equatable {
     String? facebookPageAccessToken,
     String? facebookVerifyToken,
     String? facebookPageId,
-  }) =>
-      SettingsState(
-        currency: currency ?? this.currency,
-        themeMode: themeMode ?? this.themeMode,
-        facebookPageAccessToken:
-            facebookPageAccessToken ?? this.facebookPageAccessToken,
-        facebookVerifyToken: facebookVerifyToken ?? this.facebookVerifyToken,
-        facebookPageId: facebookPageId ?? this.facebookPageId,
-      );
+    bool? showProductCardImage,
+  }) => SettingsState(
+    currency: currency ?? this.currency,
+    themeMode: themeMode ?? this.themeMode,
+    facebookPageAccessToken:
+        facebookPageAccessToken ?? this.facebookPageAccessToken,
+    facebookVerifyToken: facebookVerifyToken ?? this.facebookVerifyToken,
+    facebookPageId: facebookPageId ?? this.facebookPageId,
+    showProductCardImage: showProductCardImage ?? this.showProductCardImage,
+  );
 
   @override
   List<Object?> get props => [
-        currency,
-        themeMode,
-        facebookPageAccessToken,
-        facebookVerifyToken,
-        facebookPageId
-      ];
+    currency,
+    themeMode,
+    facebookPageAccessToken,
+    facebookVerifyToken,
+    facebookPageId,
+    showProductCardImage,
+  ];
 }
 
 class SettingsCubit extends Cubit<SettingsState> {
@@ -64,13 +68,15 @@ class SettingsCubit extends Cubit<SettingsState> {
     final accessToken = await _repo.get('facebook_page_access_token');
     final verifyToken = await _repo.get('facebook_verify_token');
     final pageId = await _repo.get('facebook_page_id');
-    emit(SettingsState(
-      currency: cur,
-      themeMode: mode,
-      facebookPageAccessToken: accessToken,
-      facebookVerifyToken: verifyToken,
-      facebookPageId: pageId,
-    ));
+    emit(
+      SettingsState(
+        currency: cur,
+        themeMode: mode,
+        facebookPageAccessToken: accessToken,
+        facebookVerifyToken: verifyToken,
+        facebookPageId: pageId,
+      ),
+    );
   }
 
   Future<void> setCurrency(String currency) async {

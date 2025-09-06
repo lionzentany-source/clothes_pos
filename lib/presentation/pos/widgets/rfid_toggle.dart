@@ -4,8 +4,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/core/hardware/uhf/uhf_reader.dart';
 import 'package:clothes_pos/presentation/pos/bloc/pos_cubit.dart';
+import 'package:clothes_pos/presentation/pos/utils/cart_helpers.dart';
 import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
 import 'package:clothes_pos/data/repositories/settings_repository.dart';
+import 'package:clothes_pos/presentation/common/widgets/app_buttons.dart';
 
 class RfidToggle extends StatefulWidget {
   const RfidToggle({super.key});
@@ -72,11 +74,17 @@ class _RfidToggleState extends State<RfidToggle> {
             return;
           }
           _seen[t.epc] = now;
-          if (!mounted) return;
+          if (!context.mounted) return;
           // Safely schedule on next frame to avoid using possibly stale context
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (!mounted) return;
-            context.read<PosCubit>().addByRfid(t.epc);
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            if (!context.mounted) return;
+            final pos = context.read<PosCubit>();
+            final resolved = await pos.addByRfid(t.epc);
+            if (resolved != null) {
+              final currentContext = context;
+              if (!currentContext.mounted) return;
+              await safeAddToCart(currentContext, resolved.id, resolved.price);
+            }
           });
         });
         await _reader!.startInventory();
@@ -94,16 +102,19 @@ class _RfidToggleState extends State<RfidToggle> {
   }
 
   void _show(String t, String m) {
-    if (!mounted) return;
+    if (!context.mounted) return;
     showCupertinoDialog(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogCtx) => CupertinoAlertDialog(
         title: Text(t),
         content: Text(m),
         actions: [
           CupertinoDialogAction(
             isDefaultAction: true,
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              final nav = Navigator.of(dialogCtx);
+              if ((dialogCtx as Element).mounted) nav.pop();
+            },
             child: const Text('حسنًا'),
           ),
         ],
@@ -114,8 +125,7 @@ class _RfidToggleState extends State<RfidToggle> {
   @override
   Widget build(BuildContext context) {
     final available = _reader != null;
-    return CupertinoButton(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+    return AppPrimaryButton(
       onPressed: available ? _toggle : null,
       child: Row(
         mainAxisSize: MainAxisSize.min,

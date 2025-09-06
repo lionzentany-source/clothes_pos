@@ -7,6 +7,7 @@ import 'package:clothes_pos/core/printing/system_pdf_printer.dart';
 import 'package:clothes_pos/core/printing/thermal_print_service.dart';
 import 'package:clothes_pos/core/printing/escpos_generator.dart';
 import 'package:clothes_pos/l10n_clean/app_localizations.dart';
+import 'package:clothes_pos/core/barcode/barcode_label_print_service.dart';
 
 class PrintingSettingsScreen extends StatefulWidget {
   const PrintingSettingsScreen({super.key});
@@ -25,6 +26,15 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
   String? _printerName;
   final _thermalIpCtrl = TextEditingController();
   final _thermalPortCtrl = TextEditingController();
+  // Label template controls
+  final _labelWidthCtrl = TextEditingController();
+  final _labelHeightCtrl = TextEditingController();
+  final _labelMarginCtrl = TextEditingController();
+  final _labelFontCtrl = TextEditingController();
+  final _labelBarcodeHeightCtrl = TextEditingController();
+  bool _labelShowName = true;
+  bool _labelShowPrice = false;
+  String? _barcodePrinterName;
 
   @override
   void initState() {
@@ -45,6 +55,16 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
           await _settings.get('thermal_printer_ip') ?? '192.168.1.100';
       _thermalPortCtrl.text =
           await _settings.get('thermal_printer_port') ?? '9100';
+      // Label template
+      _labelWidthCtrl.text = await _settings.get('label_width_mm') ?? '58';
+      _labelHeightCtrl.text = await _settings.get('label_height_mm') ?? '40';
+      _labelMarginCtrl.text = await _settings.get('label_margin_mm') ?? '3';
+      _labelFontCtrl.text = await _settings.get('label_font_pt') ?? '9';
+      _labelBarcodeHeightCtrl.text =
+          await _settings.get('label_barcode_h_mm') ?? '18';
+      _labelShowName = (await _settings.get('label_show_name')) != '0';
+      _labelShowPrice = (await _settings.get('label_show_price')) == '1';
+      _barcodePrinterName = await _settings.get('barcode_printer_name');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -61,6 +81,17 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
       await _settings.set('print_open_dialog', _openDialog ? '1' : '0');
       await _settings.set('thermal_printer_ip', _thermalIpCtrl.text.trim());
       await _settings.set('thermal_printer_port', _thermalPortCtrl.text.trim());
+      // Label template
+      await _settings.set('label_width_mm', _labelWidthCtrl.text.trim());
+      await _settings.set('label_height_mm', _labelHeightCtrl.text.trim());
+      await _settings.set('label_margin_mm', _labelMarginCtrl.text.trim());
+      await _settings.set('label_font_pt', _labelFontCtrl.text.trim());
+      await _settings.set(
+        'label_barcode_h_mm',
+        _labelBarcodeHeightCtrl.text.trim(),
+      );
+      await _settings.set('label_show_name', _labelShowName ? '1' : '0');
+      await _settings.set('label_show_price', _labelShowPrice ? '1' : '0');
       if (!mounted) return;
       await showCupertinoDialog(
         context: context,
@@ -97,6 +128,25 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
     await sp.clearDefaultPrinter();
     if (!mounted) return;
     setState(() => _printerName = null);
+  }
+
+  Future<void> _pickBarcodePrinter() async {
+    final sp = SystemPdfPrinter();
+    final printer = await sp.pickAndSaveDefaultPrinter(context);
+    if (printer != null) {
+      // Store also as dedicated barcode printer
+      await _settings.set('barcode_printer_url', printer.url);
+      await _settings.set('barcode_printer_name', printer.name);
+    }
+    if (!mounted) return;
+    setState(() => _barcodePrinterName = printer?.name);
+  }
+
+  Future<void> _clearBarcodePrinter() async {
+    await _settings.set('barcode_printer_url', null);
+    await _settings.set('barcode_printer_name', null);
+    if (!mounted) return;
+    setState(() => _barcodePrinterName = null);
   }
 
   Future<Uint8List> _buildTestPdfBytes() async {
@@ -140,6 +190,112 @@ class _PrintingSettingsScreenState extends State<PrintingSettingsScreen> {
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Label template section
+                  const SizedBox(height: 8),
+                  const Text('قالب ملصق الباركود'),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoTextField(
+                          controller: _labelWidthCtrl,
+                          placeholder: 'عرض (مم) 58',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: CupertinoTextField(
+                          controller: _labelHeightCtrl,
+                          placeholder: 'ارتفاع (مم) 40',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoTextField(
+                          controller: _labelMarginCtrl,
+                          placeholder: 'هوامش (مم) 3',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: CupertinoTextField(
+                          controller: _labelFontCtrl,
+                          placeholder: 'حجم الخط (نقطة) 9',
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  CupertinoTextField(
+                    controller: _labelBarcodeHeightCtrl,
+                    placeholder: 'ارتفاع الباركود (مم) 18',
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('إظهار الاسم'),
+                      CupertinoSwitch(
+                        value: _labelShowName,
+                        onChanged: (v) => setState(() => _labelShowName = v),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('إظهار السعر'),
+                      CupertinoSwitch(
+                        value: _labelShowPrice,
+                        onChanged: (v) => setState(() => _labelShowPrice = v),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text('طابعة ملصقات الباركود الافتراضية'),
+                  const SizedBox(height: 6),
+                  Text(
+                    _barcodePrinterName?.isNotEmpty == true
+                        ? _barcodePrinterName!
+                        : l.none,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CupertinoButton(
+                          onPressed: _loading ? null : _pickBarcodePrinter,
+                          child: const Text('اختيار طابعة الباركود'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: CupertinoButton(
+                          onPressed: _loading ? null : _clearBarcodePrinter,
+                          child: Text(l.clearDefault),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  CupertinoButton(
+                    onPressed: _loading
+                        ? null
+                        : () async {
+                            // Build and print a sample label via barcode label service
+                            await sl<BarcodeLabelPrintService>().printLabel(
+                              barcode: '1234567890123',
+                              productName: 'ملصق اختبار',
+                              priceText: 'SAR 10.00',
+                            );
+                          },
+                    child: const Text('طباعة ملصق اختبار'),
+                  ),
+                  const SizedBox(height: 16),
                   Text(l.pageSizeMm),
                   const SizedBox(height: 8),
                   Row(

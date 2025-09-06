@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:barcode_scan2/barcode_scan2.dart';
 import 'package:clothes_pos/presentation/pos/bloc/pos_cubit.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:clothes_pos/presentation/pos/utils/cart_helpers.dart';
 import 'package:clothes_pos/presentation/design/system/app_theme.dart';
 import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
+import 'package:clothes_pos/presentation/common/widgets/app_buttons.dart';
 
 class RapidScanScreen extends StatefulWidget {
   const RapidScanScreen({super.key});
@@ -18,21 +20,27 @@ class _RapidScanScreenState extends State<RapidScanScreen> {
   Future<void> _loopScan() async {
     if (_scanning) return;
     setState(() => _scanning = true);
-    while (mounted && _scanning) {
-      final code = await FlutterBarcodeScanner.scanBarcode(
-        '#ff6666',
-        'إلغاء',
-        true,
-        ScanMode.BARCODE,
-      );
-      if (!mounted || code == '-1') break;
-      final ok = await context.read<PosCubit>().addByBarcode(code);
+    final c = context; // capture the context used inside the loop
+    while (c.mounted && _scanning) {
+      final result = await BarcodeScanner.scan();
+      if (!c.mounted) break;
+      final code = result.rawContent;
+      if (code.isEmpty) break; // cancelled
+      final pos = c.read<PosCubit>();
+      final resolved = await pos.addByBarcode(code);
+      var ok = false;
+      if (resolved != null) {
+        if (!c.mounted) break;
+        await safeAddToCart(c, resolved.id, resolved.price);
+        ok = true;
+      }
+      if (!c.mounted) break;
       setState(() {
         _recent.insert(0, '${ok ? '' : '❌ '}$code');
         if (_recent.length > 10) _recent.removeLast();
       });
     }
-    if (mounted) setState(() => _scanning = false);
+    if (c.mounted) setState(() => _scanning = false);
   }
 
   @override
@@ -41,10 +49,10 @@ class _RapidScanScreenState extends State<RapidScanScreen> {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: const Text('وضع المسح السريع'),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
+        trailing: AppIconButton(
+          size: 40,
           onPressed: () => Navigator.pop(context),
-          child: const Icon(CupertinoIcons.xmark),
+          icon: const Icon(CupertinoIcons.xmark),
         ),
       ),
       child: SafeArea(
@@ -86,12 +94,12 @@ class _RapidScanScreenState extends State<RapidScanScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              CupertinoButton.filled(
+              AppPrimaryButton(
                 onPressed: _scanning ? null : _loopScan,
                 child: Text(_scanning ? 'جارٍ المسح...' : 'ابدأ المسح المتكرر'),
               ),
               if (_scanning)
-                CupertinoButton(
+                AppPrimaryButton(
                   onPressed: () => setState(() => _scanning = false),
                   child: const Text('إيقاف'),
                 ),

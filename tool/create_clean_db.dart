@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 // Small tool to create a clean dev DB without legacy size/color columns.
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';

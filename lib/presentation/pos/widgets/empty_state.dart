@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/presentation/design/system/app_theme.dart';
+import 'package:clothes_pos/presentation/design/system/adaptive_layout.dart';
 
 enum EmptyStateKind { empty, notFound, offline, error }
 
@@ -21,40 +22,60 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.colors;
+    final isTablet = context.isTablet;
+    final iconSize = isTablet ? 64.0 : 48.0;
+    final titleSize = isTablet ? 20.0 : 16.0;
+    final messageSize = isTablet ? 16.0 : 13.0;
+    final spacing = isTablet ? 16.0 : 12.0;
+    final maxWidth = isTablet ? 400.0 : 280.0;
+
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 48, color: c.textSecondary.withValues(alpha: 0.6)),
-          const SizedBox(height: 12),
+          Icon(
+            icon,
+            size: iconSize,
+            color: c.textSecondary.withValues(alpha: 0.6),
+          ),
+          SizedBox(height: spacing),
           Text(
             title,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: titleSize,
               fontWeight: FontWeight.w600,
               color: c.textPrimary,
             ),
+            textAlign: TextAlign.center,
           ),
           if (message != null) ...[
-            const SizedBox(height: 6),
+            SizedBox(height: spacing / 2),
             SizedBox(
-              width: 280,
+              width: maxWidth,
               child: Text(
                 message!,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: c.textSecondary, fontSize: 13),
+                style: TextStyle(
+                  color: c.textSecondary,
+                  fontSize: messageSize,
+                  height: 1.4,
+                ),
               ),
             ),
           ],
           if (onRetry != null) ...[
-            const SizedBox(height: 12),
+            SizedBox(height: spacing),
             CupertinoButton(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 24 : 20,
+                vertical: isTablet ? 12 : 8,
+              ),
               onPressed: onRetry,
               child: Text(
                 kind == EmptyStateKind.offline
                     ? 'إعادة المحاولة'
                     : 'محاولة مرة أخرى',
+                style: TextStyle(fontSize: isTablet ? 16 : 14),
               ),
             ),
           ],

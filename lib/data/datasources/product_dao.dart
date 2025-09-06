@@ -305,14 +305,20 @@ class ProductDao {
     if (rows.isEmpty) return null;
     final variant = ProductVariant.fromMap(rows.first);
 
-    if (!FeatureFlags.useDynamicAttributes) {
+    // Always attempt to populate attributes for richer UI, regardless of flag.
+    try {
+      final attributeValues = await _attributeDao.getAttributeValuesForVariant(
+        variant.id!,
+      );
+      return variant.copyWith(attributes: attributeValues);
+    } catch (e) {
+      // If attributes table not present or feature effectively disabled, return base variant
+      AppLogger.w(
+        '[ProductDao.getVariantWithAttributesById] attributes load failed, returning base variant',
+        error: e,
+      );
       return variant;
     }
-
-    final attributeValues = await _attributeDao.getAttributeValuesForVariant(
-      variant.id!,
-    );
-    return variant.copyWith(attributes: attributeValues);
   }
 
   Future<List<ProductVariant>> getLowStockVariants({

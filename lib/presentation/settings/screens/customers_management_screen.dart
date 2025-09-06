@@ -78,6 +78,7 @@ class _CustomersManagementScreenState extends State<CustomersManagementScreen> {
   }
 
   void _showErrorDialog(String title, String message) {
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -94,6 +95,7 @@ class _CustomersManagementScreenState extends State<CustomersManagementScreen> {
   }
 
   Future<void> _showAddCustomerDialog() async {
+    if (!context.mounted) return; // safety
     final nameController = TextEditingController();
     final phoneController = TextEditingController();
 
@@ -174,6 +176,7 @@ class _CustomersManagementScreenState extends State<CustomersManagementScreen> {
   }
 
   Future<void> _showEditCustomerDialog(Customer customer) async {
+    if (!context.mounted) return; // safety
     final nameController = TextEditingController(text: customer.name);
     final phoneController = TextEditingController(
       text: customer.phoneNumber ?? '',
@@ -256,6 +259,7 @@ class _CustomersManagementScreenState extends State<CustomersManagementScreen> {
   }
 
   Future<void> _showDeleteCustomerDialog(Customer customer) async {
+    if (!context.mounted) return; // safety
     final result = await showCupertinoDialog<bool>(
       context: context,
       builder: (context) => CupertinoAlertDialog(

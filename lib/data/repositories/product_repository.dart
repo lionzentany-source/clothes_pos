@@ -28,13 +28,23 @@ class ProductRepository {
   Future<int> deleteParent(int id) => dao.deleteParentProduct(id);
   Future<ParentProduct?> getParentById(int id) => dao.getParentById(id);
 
-  /// Returns a map with keys 'parent' (ParentProduct) and 'attributes' (List<Attribute>)
+  /// Returns a map with keys `parent` (ParentProduct) and `attributes` (List of Attribute)
   Future<Map<String, Object?>> getParentWithAttributes(int id) async {
     final m = await dao.getParentWithAttributes(id);
     if (m.isEmpty) return {};
     final parent = ParentProduct.fromMap(m['parent'] as Map<String, Object?>);
-    final attrsRaw = (m['attributes'] as List).cast<Map<String, Object?>>();
-    final attrs = attrsRaw.map((r) => Attribute.fromMap(r)).toList();
+    final attrsList = (m['attributes'] as List);
+    // Normalize to List<Attribute>
+    final attrs = attrsList.map((e) {
+      if (e is Attribute) return e;
+      if (e is Map<String, Object?>) return Attribute.fromMap(e);
+      try {
+        final mm = (e as dynamic) as Map<String, Object?>;
+        return Attribute.fromMap(mm);
+      } catch (_) {
+        return Attribute(name: e.toString());
+      }
+    }).toList();
     return {'parent': parent, 'attributes': attrs};
   }
 

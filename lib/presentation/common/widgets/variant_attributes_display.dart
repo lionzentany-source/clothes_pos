@@ -27,8 +27,9 @@ class VariantAttributesDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!FeatureFlags.useDynamicAttributes) return const SizedBox.shrink();
-    if (attributes == null || attributes!.isEmpty)
+    if (attributes == null || attributes!.isEmpty) {
       return const SizedBox.shrink();
+    }
     final values = attributes!
         .map(_toValue)
         .where((s) => s.isNotEmpty)
@@ -40,7 +41,7 @@ class VariantAttributesDisplay extends StatelessWidget {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       style: AppTypography.bodyStrong.copyWith(
-        color: CupertinoColors.secondaryLabel,
+        color: CupertinoTheme.of(context).textTheme.textStyle.color,
         fontSize: 12,
         fontWeight: FontWeight.bold,
       ),

@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
@@ -106,13 +107,15 @@ Future<void> main(List<String> args) async {
               hits++;
               if (hits <= 5) {
                 final excerpt = v.length > 120
-                    ? v.substring(0, 120) + '...'
+                    ? '${v.substring(0, 120)}...'
                     : v;
                 print('Found in $table.$colName (excerpt): $excerpt');
               }
             }
           }
-          if (hits > 0) print('-> $hits hits in sample of $table.$colName');
+          if (hits > 0) {
+            print('-> $hits hits in sample of $table.$colName');
+          }
         }
       }
     }

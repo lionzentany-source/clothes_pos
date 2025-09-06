@@ -14,6 +14,7 @@ void main() async {
 
   final server = await HttpServer.bind('localhost', 8080);
   serveRequests(server, handler);
+  // ignore: avoid_print
   print('API Server running on localhost:${server.port}');
 }
 

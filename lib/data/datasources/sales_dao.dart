@@ -97,6 +97,22 @@ class SalesDao {
     return Sale.fromMap(rows.first);
   }
 
+  Future<Map<String, dynamic>?> getSaleInfo(int saleId) async {
+    final db = await _dbHelper.database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT s.*, u.full_name as user_name, c.name as customer_name
+      FROM sales s
+      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN customers c ON s.customer_id = c.id
+      WHERE s.id = ?
+      LIMIT 1
+      ''',
+      [saleId],
+    );
+    return rows.isNotEmpty ? rows.first : null;
+  }
+
   Future<List<Payment>> paymentsForSale(int saleId) async {
     final db = await _dbHelper.database;
     final rows = await db.query(

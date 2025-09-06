@@ -52,7 +52,9 @@ class AggregatedReportsRepository {
               }
             }
           } else {
-            for (final r in rows) r['attributes'] = [];
+            for (final r in rows) {
+              r['attributes'] = [];
+            }
           }
         } catch (e, st) {
           AppLogger.w(

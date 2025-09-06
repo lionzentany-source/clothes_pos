@@ -96,6 +96,8 @@ class _PurchaseListScreenState extends State<PurchaseListScreen> {
                           builder: (_) => PurchaseDetailsScreen(invoice: inv),
                         ),
                       );
+                      // Defensive: ensure the list screen is still mounted before any future extension logic
+                      if (!mounted) return;
                     },
                   );
                 },

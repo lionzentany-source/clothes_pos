@@ -48,6 +48,7 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
           onPressed: () async {
             final nameCtrl = TextEditingController();
             final contactCtrl = TextEditingController();
+            if (!context.mounted) return; // safety
             await showCupertinoDialog(
               context: context,
               builder: (ctx) => CupertinoAlertDialog(
@@ -108,6 +109,7 @@ class _SupplierSearchPageState extends State<SupplierSearchPage> {
                       } catch (e) {
                         if (!mounted || !ctx.mounted) return;
                         final friendly = SqlErrorHelper.toArabicMessage(e);
+                        if (!ctx.mounted) return; // safety
                         await showCupertinoDialog(
                           context: ctx,
                           builder: (_) => CupertinoAlertDialog(

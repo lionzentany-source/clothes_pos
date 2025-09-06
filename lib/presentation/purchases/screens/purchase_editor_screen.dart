@@ -1,11 +1,13 @@
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/models/purchase_invoice.dart';
 import 'package:clothes_pos/data/models/purchase_invoice_item.dart';
+import 'package:clothes_pos/data/models/supplier.dart';
 import 'package:clothes_pos/data/repositories/purchase_repository.dart';
 import 'package:clothes_pos/data/models/product_variant.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:clothes_pos/presentation/common/widgets/app_labeled_field.dart';
+import 'package:clothes_pos/presentation/common/widgets/floating_modal.dart';
 import 'package:clothes_pos/l10n_clean/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:clothes_pos/presentation/auth/bloc/auth_cubit.dart';
@@ -16,6 +18,7 @@ import 'package:clothes_pos/presentation/common/sql_error_helper.dart';
 
 import 'package:clothes_pos/presentation/common/widgets/action_button.dart';
 import 'package:clothes_pos/presentation/common/widgets/variant_attributes_display.dart';
+import 'package:clothes_pos/presentation/common/overlay/app_toast.dart';
 
 import 'supplier_search_page.dart';
 import 'parent_search_page.dart';
@@ -37,8 +40,12 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
   String? _supplierName;
 
   Future<void> _pickVariant(int index) async {
-    final selected = await Navigator.of(context).push<ProductVariant>(
-      CupertinoPageRoute(builder: (_) => const ParentSearchPage()),
+    final selected = await FloatingModal.showWithSize<ProductVariant>(
+      context: context,
+      title: AppLocalizations.of(context).selectVariant,
+      size: ModalSize.large,
+      scrollable: false,
+      child: const ParentSearchPage(),
     );
     if (selected != null && mounted) {
       setState(() {
@@ -178,7 +185,14 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
       }
 
       if (!mounted) return;
-      Navigator.of(context).pop(true);
+      // Reset form after successful save so the user knows it's saved.
+      _resetFormAfterSave();
+      // Show a lightweight success toast (non-blocking)
+      AppToast.show(
+        context,
+        message: AppLocalizations.of(context).infoSaved,
+        type: ToastType.success,
+      );
     } catch (e) {
       final friendly = SqlErrorHelper.toArabicMessage(e);
       _showError(friendly);
@@ -187,7 +201,26 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
     }
   }
 
+  void _resetFormAfterSave() {
+    setState(() {
+      _supplierId = null;
+      _supplierName = null;
+      _supplierIdCtrl.clear();
+      _referenceCtrl.clear();
+      // Reset items to a single empty row
+      for (final i in _items) {
+        i.dispose();
+      }
+      _items
+        ..clear()
+        ..add(_ItemEditModel.empty());
+      _receivedDate = DateTime.now();
+      _saving = false;
+    });
+  }
+
   void _showError(String msg) {
+    if (!context.mounted) return; // safety
     showCupertinoDialog(
       context: context,
       builder: (dialogCtx) => CupertinoAlertDialog(
@@ -247,11 +280,16 @@ class _PurchaseEditorScreenState extends State<PurchaseEditorScreen> {
                       onTap: !canPurchase
                           ? () {}
                           : () async {
-                              final selected = await Navigator.of(context).push(
-                                CupertinoPageRoute(
-                                  builder: (_) => const SupplierSearchPage(),
-                                ),
-                              );
+                              final selected =
+                                  await FloatingModal.showWithSize<Supplier>(
+                                    context: context,
+                                    title: AppLocalizations.of(
+                                      context,
+                                    ).supplier,
+                                    size: ModalSize.medium,
+                                    scrollable: false,
+                                    child: const SupplierSearchPage(),
+                                  );
                               if (selected != null) {
                                 setState(() {
                                   // Keep the numeric id internally, but show only the name

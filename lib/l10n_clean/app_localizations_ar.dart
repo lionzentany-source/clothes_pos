@@ -201,19 +201,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String get basket => 'السلة';
 
   @override
-  String get editLine => 'تعديل السطر';
+  String get editLine => 'Edit line';
 
   @override
-  String get discountAmount => 'الخصم (مبلغ)';
+  String get discountAmount => 'Discount (amount)';
 
   @override
-  String get taxAmount => 'الضريبة (مبلغ)';
+  String get taxAmount => 'Tax (amount)';
 
   @override
-  String get noteLabel => 'ملاحظة';
+  String get noteLabel => 'Note';
 
   @override
-  String get exact => 'المبلغ بالضبط';
+  String get exact => 'Exact';
 
   @override
   String get item => 'منتج';
@@ -291,7 +291,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get done => 'تم';
 
   @override
-  String get items => 'مجموع الكاش';
+  String get items => 'العناصر';
 
   @override
   String get purchaseInvoiceTitle => 'فاتورة مشتريات';
@@ -467,46 +467,46 @@ class AppLocalizationsAr extends AppLocalizations {
   String get searchPlaceholder => 'ابحث عن المنتج أو امسح الباركود';
 
   @override
-  String get searchProductPlaceholder => 'ابحث عن منتج...';
+  String get searchProductPlaceholder => 'Search products...';
 
   @override
-  String get sizeLabel => 'المقاس:';
+  String get sizeLabel => 'Size:';
 
   @override
-  String get colorLabel => 'اللون:';
+  String get colorLabel => 'Color:';
 
   @override
-  String get skuLabel => 'رقم الصنف:';
+  String get skuLabel => 'SKU:';
 
   @override
-  String get barcodeLabel => 'الباركود:';
+  String get barcodeLabel => 'Barcode:';
 
   @override
-  String get stocktakeTitle => 'الجرد';
+  String get stocktakeTitle => 'Stocktake';
 
   @override
-  String get countedUnitsLabel => 'مجرود';
+  String get countedUnitsLabel => 'Counted';
 
   @override
-  String get uncountedUnitsLabel => 'غير مجرود';
+  String get uncountedUnitsLabel => 'Uncounted';
 
   @override
-  String get countedCostLabel => 'تكلفة المجرود';
+  String get countedCostLabel => 'Counted cost';
 
   @override
-  String get countedProfitLabel => 'الربح';
+  String get countedProfitLabel => 'Profit';
 
   @override
-  String get startRfid => 'بدء قراءة RFID';
+  String get startRfid => 'Start RFID';
 
   @override
-  String get stopReading => 'إنهاء القراءة';
+  String get stopReading => 'Stop reading';
 
   @override
-  String get addByBarcode => 'إضافة بالباركود';
+  String get addByBarcode => 'Add by barcode';
 
   @override
-  String get categories => 'الفئات';
+  String get categories => 'Categories';
 
   @override
   String get checkout => 'إتمام البيع';
@@ -645,6 +645,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get backupFailed => 'فشل النسخ الاحتياطي';
 
   @override
+  String get clearCartConfirmation => 'هل تريد مسح السلة؟';
+
+  @override
+  String get cartCleared => 'تم مسح السلة';
+
+  @override
+  String get saleHeld => 'تم حفظ الطلب المؤقت';
+
+  @override
+  String get heldSalesTitle => 'الطلبات المؤقتة';
+
+  @override
+  String get noHeldSales => 'لا توجد طلبات مؤقتة';
+
+  @override
+  String get holdNamePlaceholder => 'اسم الحفظ (اختياري)';
+
+  @override
+  String get restoreSale => 'استعادة';
+
+  @override
+  String get holdSaved => 'تم حفظ الطلب';
+
+  @override
   String get enterDbPathFirst => 'أدخل مسار ملف .db أولاً';
 
   @override
@@ -705,7 +729,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get testPrinter => 'اختبار الطابعة';
 
   @override
-  String get manageAttributesTitle => 'إدارة الخصائص';
+  String get manageAttributesTitle => 'ادارة خصائص المنتجات';
 
   @override
   String get attributeNoun => 'خاصية';
@@ -776,4 +800,61 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get valueDeleted => 'تم حذف القيمة';
+
+  @override
+  String get clearCart => 'مسح';
+
+  @override
+  String get holdCart => 'انتظار';
+
+  @override
+  String get waitingSales => 'فواتير الانتظار';
+
+  @override
+  String get returnService => 'خدمة الإرجاع';
+
+  @override
+  String get returnProduct => 'إرجاع منتج';
+
+  @override
+  String get returnFullInvoice => 'إرجاع فاتورة كاملة';
+
+  @override
+  String get returnType => 'نوع الإرجاع';
+
+  @override
+  String get selectReturnType => 'اختر نوع الإرجاع';
+
+  @override
+  String get saleIdLabel => 'رقم الفاتورة';
+
+  @override
+  String get returnReason => 'سبب الإرجاع';
+
+  @override
+  String get returnReasonOptional => 'سبب الإرجاع (اختياري)';
+
+  @override
+  String get returnSuccessTitle => 'تم الإرجاع';
+
+  @override
+  String get returnSuccessMessage => 'تم معالجة الإرجاع بنجاح';
+
+  @override
+  String get returnItemsTitle => 'عناصر الإرجاع';
+
+  @override
+  String get noReturnableItems => 'لا توجد عناصر قابلة للإرجاع';
+
+  @override
+  String get returnQty => 'كمية الإرجاع';
+
+  @override
+  String get unitPrice => 'سعر الوحدة';
+
+  @override
+  String get totalRefund => 'إجمالي المرتجع';
+
+  @override
+  String get processReturn => 'معالجة الإرجاع';
 }

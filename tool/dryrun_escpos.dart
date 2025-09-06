@@ -94,3 +94,4 @@ String _extractText(Uint8List bytes) {
   }
   return buf.toString();
 }
+

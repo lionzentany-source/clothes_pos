@@ -33,7 +33,11 @@ class BrandPickerSheet extends StatelessWidget {
         CupertinoActionSheetAction(
           onPressed: () {
             Navigator.of(context).pop();
-            onAddNew();
+            // Defer to next microtask to avoid pushing while sheet is active
+            Future.microtask(() {
+              if (!(context as Element).mounted) return;
+              onAddNew();
+            });
           },
           child: Text(l.addAction),
         ),

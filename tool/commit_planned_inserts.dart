@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:io';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart' as p;
@@ -60,6 +61,8 @@ Future<void> main(List<String> args) async {
       'clothes_pos_db_backup_${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-')}.db',
     );
     File(dbPath).copySync(dest);
+    // ignore: avoid_print$([Environment]::NewLine)
+    // ignore: avoid_print$([Environment]::NewLine)
     print('Backup created at $dest');
   }
 
@@ -78,6 +81,8 @@ Future<void> main(List<String> args) async {
   try {
     final planned = File(plannedPath).readAsLinesSync();
     if (planned.length <= 1) {
+      // ignore: avoid_print$([Environment]::NewLine)
+      // ignore: avoid_print$([Environment]::NewLine)
       print('Planned file has no rows to process: $plannedPath');
     }
     // parse CSV lines skipping header
@@ -104,6 +109,8 @@ Future<void> main(List<String> args) async {
         attrId = attrRows.first['id'] as int;
       } else {
         if (dryRun) {
+          // ignore: avoid_print$([Environment]::NewLine)
+          // ignore: avoid_print$([Environment]::NewLine)
           print('[dry-run] would create attribute $attribute');
           auditSink.writeln(
             '${_now()},would_create_attribute,$attribute, , ,$source,dry-run',
@@ -125,6 +132,8 @@ Future<void> main(List<String> args) async {
       );
       if (valRows.isEmpty) {
         if (dryRun) {
+          // ignore: avoid_print$([Environment]::NewLine)
+          // ignore: avoid_print$([Environment]::NewLine)
           print(
             '[dry-run] would insert attribute_value($attribute) = $normalized (example: $raw)',
           );
@@ -149,6 +158,8 @@ Future<void> main(List<String> args) async {
 
     await auditSink.flush();
     await auditSink.close();
+    // ignore: avoid_print$([Environment]::NewLine)
+    // ignore: avoid_print$([Environment]::NewLine)
     print('Audit written to ${auditFile.path}');
   } finally {
     await db.close();

@@ -34,6 +34,7 @@ Future<Response> _handleEvent(Request request) async {
     for (final entry in data['entry']) {
       for (final message in entry['messaging']) {
         // TODO: Process the message
+        // ignore: avoid_print
         print('Received message: $message');
       }
     }

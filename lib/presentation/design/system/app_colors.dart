@@ -3,10 +3,10 @@ import 'package:flutter/cupertino.dart';
 class AppColors {
   AppColors._();
   // Base palette swatches
-  static const Color blue600 = Color(0xFF0063B1);
-  static const Color blue700 = Color(0xFF004A84);
-  static const Color blue400 = Color(0xFF3380C4);
-  static const Color grey50 = Color(0xFFF5F7FA);
+  static const Color blue600 = Color(0xFF2E90FA); // brighter primary for POS
+  static const Color blue700 = Color(0xFF0063B1);
+  static const Color blue400 = Color(0xFF66B0FF);
+  static const Color grey50 = Color(0xFFFAFBFC);
   static const Color grey100 = CupertinoColors.systemGrey6; // alt surface
   static const Color grey200 = Color(0xFFE1E5EA);
   static const Color grey300 = Color(0xFFB5BEC7);
@@ -29,7 +29,8 @@ class AppColors {
   ); // lighter on dark surface
 
   // Semantic roles (light theme)
-  static const Color primary = blue600;
+  // Use a darker primary to meet WCAG AA contrast on white surfaces
+  static const Color primary = blue700;
   static const Color primaryVariant = blue700;
   static const Color primaryHover = blue400;
   static const Color surface = CupertinoColors.white;
@@ -45,7 +46,9 @@ class AppColors {
   static const Color success = green600;
   static const Color warning = yellow500;
   static const Color info = blue500;
-  static const Color accent = amber500;
+  static const Color accent = Color(
+    0xFFFF6A00,
+  ); // warmer accent for action buttons
   static const Color focusRing = Color(0xFF5AA9FF);
   static const Color overlaySoft = Color(0x14000000);
   static const Color overlayStrong = Color(0x33000000);

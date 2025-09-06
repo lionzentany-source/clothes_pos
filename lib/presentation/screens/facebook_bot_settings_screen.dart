@@ -25,7 +25,7 @@ class _FacebookBotSettingsScreenState extends State<FacebookBotSettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     _tokenController.text = prefs.getString('fb_page_token') ?? '';
     _pageIdController.text = prefs.getString('fb_page_id') ?? '';
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
   }
 
   Future<void> _saveSettings() async {
@@ -33,15 +33,20 @@ class _FacebookBotSettingsScreenState extends State<FacebookBotSettingsScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('fb_page_token', _tokenController.text.trim());
     await prefs.setString('fb_page_id', _pageIdController.text.trim());
-    setState(() => _loading = false);
+    if (mounted) setState(() => _loading = false);
+    final c = context;
+    if (!c.mounted) return;
     showCupertinoDialog(
-      context: context,
+      context: c,
       builder: (_) => CupertinoAlertDialog(
         content: const Text('تم حفظ إعدادات البوت بنجاح'),
         actions: [
           CupertinoDialogAction(
             child: const Text('موافق'),
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              if (!c.mounted) return;
+              Navigator.of(c).pop();
+            },
           ),
         ],
       ),
@@ -82,10 +87,10 @@ class _FacebookBotSettingsScreenState extends State<FacebookBotSettingsScreen> {
               ),
               const SizedBox(height: 32),
               CupertinoButton.filled(
+                onPressed: _loading ? null : _saveSettings,
                 child: _loading
                     ? const CupertinoActivityIndicator()
                     : const Text('حفظ الإعدادات'),
-                onPressed: _loading ? null : _saveSettings,
               ),
             ],
           ),

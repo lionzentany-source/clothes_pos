@@ -350,6 +350,31 @@ class FakeProductRepository implements ProductRepository {
     },
   ];
 
+  // Minimal attribute APIs to support ProductEditorScreen and AttributePicker in tests
+  @override
+  Future<List<Attribute>> getAllAttributes() async => [
+    Attribute(id: 1, name: 'Color'),
+    Attribute(id: 2, name: 'Size'),
+  ];
+
+  @override
+  Future<List<AttributeValue>> getAttributeValues(int attributeId) async {
+    switch (attributeId) {
+      case 1:
+        return [
+          AttributeValue(id: 11, attributeId: 1, value: 'Red'),
+          AttributeValue(id: 12, attributeId: 1, value: 'Blue'),
+        ];
+      case 2:
+        return [
+          AttributeValue(id: 21, attributeId: 2, value: 'S'),
+          AttributeValue(id: 22, attributeId: 2, value: 'M'),
+        ];
+      default:
+        return [];
+    }
+  }
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

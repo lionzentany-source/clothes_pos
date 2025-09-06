@@ -70,7 +70,14 @@ const List<FaqEntry> _faq = [
     isPopular: true,
     answer:
         'من تبويب المبيعات (POS)، أضف العناصر إلى السلة ثم اضغط زر إتمام البيع واختر وسيلة الدفع لحفظ الفاتورة.',
-    relatedQuestions: ['print_receipt', 'invoice_discount', 'invoice_cancel'],
+    // relatedQuestions originally included 'invoice_cancel' which is not defined.
+    // If a cancel invoice FAQ is added later, reintroduce it.
+    relatedQuestions: [
+      'print_receipt',
+      'invoice_discount',
+      'invoice_cancel',
+      'invoice_find',
+    ],
     keywords: [
       KeywordSpec('فاتوره', weight: 1.2),
       KeywordSpec('فاتورة', weight: 1.2),
@@ -87,7 +94,8 @@ const List<FaqEntry> _faq = [
     iconName: 'print',
     answer:
         'بعد حفظ البيع، يمكنك طباعة الإيصال من شاشة إتمام البيع أو من تقارير المبيعات لاحقاً.',
-    relatedQuestions: ['invoice_create', 'invoice_find'],
+    // 'invoice_find' not defined yet; if added later include it here.
+    relatedQuestions: ['invoice_create', 'invoice_find', 'invoice_cancel'],
     keywords: [
       KeywordSpec('طباعه', weight: 1.1),
       KeywordSpec('طباعة', weight: 1.1),
@@ -136,13 +144,50 @@ const List<FaqEntry> _faq = [
     iconName: 'percent',
     answer:
         'أثناء إنشاء الفاتورة، يمكنك إضافة خصم على العنصر الواحد أو على إجمالي الفاتورة من خيارات الخصم.',
-    relatedQuestions: ['invoice_create'],
+    relatedQuestions: ['invoice_create', 'invoice_cancel'],
     keywords: [
       KeywordSpec('خصم', weight: 1.2),
       KeywordSpec('تخفيض', weight: 1.0),
       KeywordSpec('فاتورة', weight: 0.8),
     ],
     imageUrl: 'assets/images/faq/add_discount.svg',
+  ),
+
+  FaqEntry(
+    id: 'invoice_cancel',
+    question: 'كيف ألغي فاتورة؟',
+    category: categoryInvoices,
+    iconName: 'cancel',
+    answer:
+        'من سجل الفواتير أو التقرير افتح الفاتورة ثم اختر خيار الإلغاء مع كتابة سبب للحفظ في السجل.',
+    relatedQuestions: ['invoice_create', 'invoice_find', 'print_receipt'],
+    keywords: [
+      KeywordSpec('الغاء', weight: 1.2),
+      KeywordSpec('إلغاء', weight: 1.2),
+      KeywordSpec('الغي', weight: 1.3),
+      KeywordSpec('الغى', weight: 1.1),
+      KeywordSpec('فاتورة', weight: 1.0),
+      KeywordSpec('استرجاع', weight: 0.8),
+    ],
+  ),
+
+  FaqEntry(
+    id: 'invoice_find',
+    question: 'كيف أبحث عن فاتورة؟',
+    category: categoryInvoices,
+    iconName: 'search',
+    answer:
+        'اذهب إلى التقارير > المبيعات أو سجل الفواتير ثم ابحث برقم الفاتورة أو التاريخ أو اسم العميل.',
+    relatedQuestions: ['print_receipt', 'invoice_create', 'invoice_cancel'],
+    keywords: [
+      KeywordSpec('بحث', weight: 1.2),
+      KeywordSpec('ابحث', weight: 1.0),
+      KeywordSpec('فاتورة', weight: 1.0),
+      KeywordSpec('رقم فاتورة', weight: 0.9),
+      // colloquial/variant terms used by users
+      KeywordSpec('ادور', weight: 1.1),
+      KeywordSpec('قديم', weight: 0.7),
+    ],
   ),
 
   // فئة المصروفات
@@ -154,7 +199,8 @@ const List<FaqEntry> _faq = [
     isPopular: true,
     answer:
         'من الإعدادات > المصروفات، اضغط علامة + لإضافة مصروف جديد وحدد الفئة والمبلغ والوصف ثم احفظ.',
-    relatedQuestions: ['expense_categories', 'expense_report'],
+    // No related questions defined yet (placeholders were removed)
+    relatedQuestions: [],
     keywords: [
       KeywordSpec('مصروف', weight: 1.3),
       KeywordSpec('اضافه', weight: 1.0),
@@ -166,6 +212,22 @@ const List<FaqEntry> _faq = [
     imageUrl: 'assets/images/faq/add_expense.svg',
   ),
 
+  FaqEntry(
+    id: 'expense_categories',
+    question: 'كيف أدير فئات المصروفات؟',
+    category: categoryExpenses,
+    iconName: 'category',
+    answer:
+        'من شاشة المصروفات افتح إدارة الفئات لإضافة أو إعادة تسمية أو حذف فئة بهدف تحسين الفرز في التقارير.',
+    relatedQuestions: ['expense_add', 'expense_report'],
+    keywords: [
+      KeywordSpec('فئات', weight: 1.2),
+      KeywordSpec('فئه', weight: 1.0),
+      KeywordSpec('تصنيف', weight: 0.9),
+      KeywordSpec('مصروف', weight: 0.8),
+    ],
+  ),
+
   // فئة الإعدادات والبيانات
   FaqEntry(
     id: 'backup_now',
@@ -175,7 +237,8 @@ const List<FaqEntry> _faq = [
     isPopular: true,
     answer:
         'اذهب إلى الإعدادات > قاعدة البيانات، واختر "نسخ احتياطي الآن" لإنشاء نسخة احتياطية فورية.',
-    relatedQuestions: ['restore_backup'],
+    // Placeholder 'restore_backup' entry not present yet.
+    relatedQuestions: [],
     keywords: [
       KeywordSpec('نسخه', weight: 1.0),
       KeywordSpec('احتياطي', weight: 1.0),
@@ -184,6 +247,26 @@ const List<FaqEntry> _faq = [
       KeywordSpec('حفظ البيانات', weight: 0.7),
     ],
     imageUrl: 'assets/images/faq/backup_data.svg',
+  ),
+
+  FaqEntry(
+    id: 'restore_backup',
+    question: 'كيف أستعيد نسخة احتياطية؟',
+    category: categorySettings,
+    iconName: 'restore',
+    answer:
+        'من الإعدادات > قاعدة البيانات اختر استعادة ثم حدد ملف النسخة السابقة ليتم استرجاع البيانات (يُنصح بإنشاء نسخة جديدة قبل الاسترجاع).',
+    relatedQuestions: ['backup_now'],
+    keywords: [
+      KeywordSpec('استعاده', weight: 1.2),
+      KeywordSpec('استعادة', weight: 1.2),
+      KeywordSpec('نسخة', weight: 1.0),
+      KeywordSpec('احتياطية', weight: 1.0),
+      KeywordSpec('باك اب', weight: 0.9),
+      KeywordSpec('نسخه', weight: 1.0),
+      KeywordSpec('احتياطيه', weight: 1.0),
+      KeywordSpec('ارجاع', weight: 0.8),
+    ],
   ),
 
   // فئة المنتجات والمخزون
@@ -195,14 +278,49 @@ const List<FaqEntry> _faq = [
     isPopular: true,
     answer:
         'من تبويب المخزون، افتح شاشة إدارة المنتجات ثم اضغط إضافة منتج وحدد التفاصيل واحفظ.',
-    relatedQuestions: ['edit_product', 'product_barcode'],
+    // Related entries not yet defined (edit_product, product_barcode)
+    relatedQuestions: [],
     keywords: [
       KeywordSpec('منتج', weight: 1.2),
       KeywordSpec('اضافه منتج', weight: 1.0),
       KeywordSpec('صنف جديد', weight: 1.0),
-      KeywordSpec('ادارة المنتجات', weight: 0.8),
+      KeywordSpec('اداره المنتجات', weight: 0.8),
     ],
     imageUrl: 'assets/images/faq/add_product.svg',
+  ),
+
+  FaqEntry(
+    id: 'edit_product',
+    question: 'كيف أعدل بيانات منتج؟',
+    category: categoryInventory,
+    iconName: 'edit',
+    answer:
+        'من إدارة المنتجات ابحث عن المنتج وافتحه ثم اضغط تعديل لتغيير الاسم أو السعر أو المخزون ثم احفظ.',
+    relatedQuestions: ['add_product', 'product_barcode'],
+    keywords: [
+      KeywordSpec('تعديل', weight: 1.2),
+      KeywordSpec('منتج', weight: 1.0),
+      KeywordSpec('سعر', weight: 0.8),
+      KeywordSpec('مخزون', weight: 0.8),
+      KeywordSpec('عدل', weight: 1.1),
+      KeywordSpec('السعر', weight: 0.9),
+    ],
+  ),
+
+  FaqEntry(
+    id: 'product_barcode',
+    question: 'كيف أضيف أو أطبع باركود المنتج؟',
+    category: categoryInventory,
+    iconName: 'qr_code',
+    answer:
+        'عند إنشاء أو تعديل المنتج أدخل رقم الباركود أو امسحه بقارئ، وللطباعة استخدم خيار طباعة الباركود من شاشة المنتج.',
+    relatedQuestions: ['add_product', 'edit_product'],
+    keywords: [
+      KeywordSpec('باركود', weight: 1.3),
+      KeywordSpec('طباعة', weight: 0.9),
+      KeywordSpec('رمز', weight: 0.8),
+      KeywordSpec('ملصق', weight: 0.8),
+    ],
   ),
 
   // فئة التقارير
@@ -219,6 +337,22 @@ const List<FaqEntry> _faq = [
       KeywordSpec('احصائيات', weight: 0.8),
     ],
     imageUrl: 'assets/images/faq/sales_report.svg',
+  ),
+
+  FaqEntry(
+    id: 'expense_report',
+    question: 'كيف أعرض تقرير المصروفات؟',
+    category: categoryReports,
+    iconName: 'assessment',
+    answer:
+        'من التقارير اختر تقرير المصروفات ثم حدد الفترة أو فئة المصروف لعرض مجموع المصروفات وتحليلها.',
+    relatedQuestions: ['expense_add', 'expense_categories'],
+    keywords: [
+      KeywordSpec('تقرير مصروفات', weight: 1.2),
+      KeywordSpec('مصروف', weight: 1.0),
+      KeywordSpec('تحليل تكلفة', weight: 0.9),
+      KeywordSpec('تحليل تكلفه', weight: 0.9),
+    ],
   ),
 
   // فئة الذكاء الاصطناعي
@@ -325,6 +459,10 @@ Iterable<String> _tokenize(String text) sync* {
 
 String _lightStem(String word) {
   // Simple Arabic light stemming (remove common suffixes)
+  // Remove Arabic definite article prefix "ال" to align words like "المنتج" with "منتج"
+  if (word.startsWith('ال') && word.length > 3) {
+    word = word.substring(2);
+  }
   if (word.endsWith('ات')) return word.substring(0, word.length - 2);
   if (word.endsWith('ان')) return word.substring(0, word.length - 2);
   if (word.endsWith('ين')) return word.substring(0, word.length - 2);

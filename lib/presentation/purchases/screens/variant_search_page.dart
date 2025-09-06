@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:clothes_pos/presentation/pos/screens/advanced_product_search_screen.dart';
 import 'package:flutter/material.dart' show Tooltip;
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
@@ -89,6 +90,25 @@ class _VariantSearchPageState extends State<VariantSearchPage> {
                       onSubmitted: (_) => _search(),
                       onChanged: (_) => _search(),
                       placeholder: 'اسم/باركود/ SKU',
+                      prefixIcon: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () =>
+                                AdvancedProductSearchScreen.open(context),
+                            child: const Padding(
+                              padding: EdgeInsets.only(left: 4),
+                              child: Icon(
+                                CupertinoIcons.slider_horizontal_3,
+                                size: 18,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          const Icon(CupertinoIcons.search, size: 18),
+                          const SizedBox(width: 4),
+                        ],
+                      ),
                     ),
                   ),
                 ],

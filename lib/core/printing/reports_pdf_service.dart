@@ -6,6 +6,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:flutter/services.dart' show rootBundle;
 
 class ReportsPdfService {
+  String _sanitize(String s) => s.replaceAll(RegExp(r'[\u200e\u200f]'), '');
+
   Future<pw.Font?> _tryLoadFont(String asset) async {
     try {
       final data = await rootBundle.load(asset);
@@ -32,6 +34,7 @@ class ReportsPdfService {
     String? purchasesTotalLabel,
     String? stockStatusLabel,
     String skuPattern = 'SKU {sku}: {qty} - RP {rp}',
+    Directory? outputDir,
   }) async {
     final pdf = pw.Document();
 
@@ -40,28 +43,41 @@ class ReportsPdfService {
       return f.format(v);
     }
 
+    // Load fonts for better glyph coverage
+    final isArabic = locale.startsWith('ar');
+    final notoRegular = await _tryLoadFont(
+      'assets/fonts/NotoNaskhArabic-Regular.ttf',
+    );
+    final notoBold = await _tryLoadFont(
+      'assets/fonts/NotoNaskhArabic-Bold.ttf',
+    );
+    final sfArabic = await _tryLoadFont(
+      'assets/db/fonts/sfpro/alfont_com_SFProAR_semibold.ttf',
+    );
+    final latinRegular = await _tryLoadFont(
+      'assets/db/fonts/sfpro/SFPRODISPLAYREGULAR.otf',
+    );
+    final latinBold = await _tryLoadFont(
+      'assets/db/fonts/sfpro/SFPRODISPLAYBOLD.otf',
+    );
+
+    final arabicRegular = isArabic ? (notoRegular ?? sfArabic) : null;
+    final arabicBold = isArabic ? (notoBold ?? sfArabic ?? notoRegular) : null;
+    final baseRegular = arabicRegular ?? latinRegular;
+    final baseBold = arabicBold ?? latinBold ?? latinRegular;
+
     pw.Widget sectionTitle(String text) => pw.Padding(
       padding: const pw.EdgeInsets.only(top: 8, bottom: 4),
       child: pw.Text(
-        text,
-        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold),
+        _sanitize(text),
+        style: pw.TextStyle(fontSize: 12, font: baseBold),
       ),
     );
-
-    // Load fonts for better glyph coverage
-    final isArabic = locale.startsWith('ar');
-    final arabicFont = isArabic
-        ? await _tryLoadFont(
-                'assets/db/fonts/sfpro/alfont_com_SFProAR_semibold.ttf',
-              ) ??
-              await _tryLoadFont('assets/fonts/NotoNaskhArabic-Regular.ttf')
-        : null;
-    final latinFont = await _tryLoadFont(
-      'assets/db/fonts/sfpro/SFPRODISPLAYREGULAR.otf',
-    );
     final fallbackFonts = <pw.Font>[
-      if (arabicFont != null) arabicFont,
-      if (latinFont != null) latinFont,
+      if (arabicRegular != null) arabicRegular,
+      if (arabicBold != null) arabicBold,
+      if (latinRegular != null) latinRegular,
+      if (latinBold != null) latinBold,
     ];
 
     pdf.addPage(
@@ -72,18 +88,15 @@ class ReportsPdfService {
           return [
             pw.DefaultTextStyle(
               style: pw.TextStyle(
-                font: arabicFont ?? latinFont,
+                font: baseRegular,
                 fontFallback: fallbackFonts,
               ),
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    title ?? 'Reports Snapshot',
-                    style: pw.TextStyle(
-                      fontSize: 16,
-                      fontWeight: pw.FontWeight.bold,
-                    ),
+                    _sanitize(title ?? 'Reports Snapshot'),
+                    style: pw.TextStyle(fontSize: 16, font: baseBold),
                   ),
                   pw.SizedBox(height: 8),
 
@@ -94,7 +107,9 @@ class ReportsPdfService {
                     children: [
                       for (final r in byDay)
                         pw.Text(
-                          "${r['d']}: ${r['cnt']} - ${money((r['total'] as num?) ?? 0)}",
+                          _sanitize(
+                            "${r['d']}: ${r['cnt']} - ${money((r['total'] as num?) ?? 0)}",
+                          ),
                         ),
                     ],
                   ),
@@ -108,7 +123,9 @@ class ReportsPdfService {
                     children: [
                       for (final r in byMonth)
                         pw.Text(
-                          "${r['m']}: ${r['cnt']} - ${money((r['total'] as num?) ?? 0)}",
+                          _sanitize(
+                            "${r['m']}: ${r['cnt']} - ${money((r['total'] as num?) ?? 0)}",
+                          ),
                         ),
                     ],
                   ),
@@ -120,7 +137,9 @@ class ReportsPdfService {
                     children: [
                       for (final r in topProducts)
                         pw.Text(
-                          "SKU ${r['sku']}: ${r['qty']} - ${money((r['rev'] as num?) ?? 0)}",
+                          _sanitize(
+                            "SKU ${r['sku']}: ${r['qty']} - ${money((r['rev'] as num?) ?? 0)}",
+                          ),
                         ),
                     ],
                   ),
@@ -132,7 +151,9 @@ class ReportsPdfService {
                     children: [
                       for (final r in staffPerf)
                         pw.Text(
-                          "${r['username']}: ${r['cnt']} - ${money((r['total'] as num?) ?? 0)}",
+                          _sanitize(
+                            "${r['username']}: ${r['cnt']} - ${money((r['total'] as num?) ?? 0)}",
+                          ),
                         ),
                     ],
                   ),
@@ -141,7 +162,7 @@ class ReportsPdfService {
                   sectionTitle(
                     purchasesTotalLabel ?? 'Purchases Total (period)',
                   ),
-                  pw.Text(money(purchasesTotal)),
+                  pw.Text(_sanitize(money(purchasesTotal))),
 
                   // Stock status (low first)
                   sectionTitle(stockStatusLabel ?? 'Stock Status (low first)'),
@@ -150,10 +171,12 @@ class ReportsPdfService {
                     children: [
                       for (final r in stockStatus)
                         pw.Text(
-                          skuPattern
-                              .replaceAll('{sku}', '${r['sku']}')
-                              .replaceAll('{qty}', '${r['quantity']}')
-                              .replaceAll('{rp}', '${r['reorder_point']}'),
+                          _sanitize(
+                            skuPattern
+                                .replaceAll('{sku}', '${r['sku']}')
+                                .replaceAll('{qty}', '${r['quantity']}')
+                                .replaceAll('{rp}', '${r['reorder_point']}'),
+                          ),
                         ),
                     ],
                   ),
@@ -165,7 +188,7 @@ class ReportsPdfService {
       ),
     );
 
-    final dir = await getTemporaryDirectory();
+    final dir = outputDir ?? await getTemporaryDirectory();
     final file = File(
       '${dir.path}/reports_snapshot_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );

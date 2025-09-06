@@ -4,11 +4,15 @@ import 'package:clothes_pos/presentation/design/system/app_spacing.dart';
 import 'package:clothes_pos/presentation/design/system/app_theme.dart';
 import 'package:clothes_pos/presentation/design/system/app_typography.dart';
 import 'package:clothes_pos/presentation/pos/bloc/pos_cubit.dart';
+import 'package:clothes_pos/presentation/pos/utils/cart_helpers.dart';
 import 'package:clothes_pos/presentation/pos/widgets/empty_state.dart';
 import 'package:clothes_pos/presentation/pos/widgets/product_grid_item.dart';
 import 'package:clothes_pos/data/repositories/product_repository.dart';
 import 'package:clothes_pos/core/di/locator.dart';
 import 'package:clothes_pos/l10n_clean/app_localizations.dart';
+
+import 'package:clothes_pos/presentation/common/widgets/app_buttons.dart';
+import 'package:clothes_pos/data/repositories/category_repository.dart';
 
 /// واجهة البحث المتقدم: ألوان (دوائر) + فئات + أحجام مع تحديث فوري AND filter.
 class AdvancedProductSearchScreen extends StatefulWidget {
@@ -49,10 +53,17 @@ class _AdvancedProductSearchScreenState
     final colors = await repo.distinctColors(limit: 200);
     final sizes = await repo.distinctSizes(limit: 200);
     if (!mounted) return;
-    final cats = context
-        .read<PosCubit>()
-        .state
-        .categories; // already loaded in POS
+    // Try to source categories from PosCubit's state; if not available, fall back to repository
+    List<dynamic> cats = const [];
+    try {
+      cats = context.read<PosCubit>().state.categories;
+    } catch (_) {
+      try {
+        cats = await sl<CategoryRepository>().listAll(limit: 200);
+      } catch (_) {
+        cats = const [];
+      }
+    }
     setState(() {
       _allColors = colors;
       _allSizes = sizes;
@@ -175,17 +186,32 @@ class _AdvancedProductSearchScreenState
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    CupertinoButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      minimumSize: const Size(28, 28),
+                    AppPrimaryButton(
                       onPressed: _reset,
                       child: const Text('مسح', style: TextStyle(fontSize: 13)),
                     ),
-                    CupertinoButton(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      minimumSize: const Size(28, 28),
+                    const SizedBox(width: 6),
+                    AppIconButton(
+                      onPressed: () {
+                        // TODO: Implement FilterPanel widget
+                        // showCupertinoModalPopup(
+                        //   context: context,
+                        //   builder: (_) => CupertinoPopupSurface(
+                        //     child: SafeArea(
+                        //       child: SizedBox(width: 360, child: FilterPanel()),
+                        //     ),
+                        //   ),
+                        // );
+                      },
+                      icon: const Icon(
+                        CupertinoIcons.slider_horizontal_3,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    AppIconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: Icon(
+                      icon: Icon(
                         CupertinoIcons.clear_circled_solid,
                         color: colors.textSecondary,
                         size: 22,
@@ -239,12 +265,12 @@ class _AdvancedProductSearchScreenState
                                     width:
                                         260, // نفس عرض البطاقة في شاشة البيع الرئيسية
                                     square: false,
-                                    onTap: () {
-                                      context.read<PosCubit>().addToCart(
-                                        _results[i]['id'] as int,
-                                        (_results[i]['sale_price'] as num)
-                                            .toDouble(),
-                                      );
+                                    onTap: () async {
+                                      final id = _results[i]['id'] as int;
+                                      final price =
+                                          (_results[i]['sale_price'] as num)
+                                              .toDouble();
+                                      await safeAddToCart(context, id, price);
                                     },
                                   ),
                                   childCount: _results.length,

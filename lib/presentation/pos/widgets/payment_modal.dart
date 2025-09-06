@@ -29,6 +29,7 @@ class PaymentModal extends StatefulWidget {
     required double total,
     required void Function(double cash, double card, double mobile) onConfirm,
   }) async {
+    if (!context.mounted) return; // safety
     await showCupertinoDialog(
       context: context,
       builder: (ctx) => Center(
@@ -144,8 +145,13 @@ class _PaymentModalState extends State<PaymentModal> {
     if (!_canProceed || _submitting) return;
     setState(() => _submitting = true);
     try {
-      Navigator.of(context).pop();
+      // Call onConfirm first, then close modal
       widget.onConfirm(_cash, _card, _mobile);
+      // Add small delay to ensure callback completion
+      await Future.delayed(const Duration(milliseconds: 50));
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -300,7 +306,9 @@ class _PaymentModalState extends State<PaymentModal> {
                 Expanded(
                   child: CupertinoButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      }
                     },
                     child: const Text('خروج'),
                   ),
@@ -324,7 +332,9 @@ class _PaymentModalState extends State<PaymentModal> {
               padding: const EdgeInsets.all(0),
               minimumSize: const Size(32, 32),
               onPressed: () {
-                Navigator.of(context).pop();
+                if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
               },
               child: const Icon(
                 CupertinoIcons.xmark_circle,

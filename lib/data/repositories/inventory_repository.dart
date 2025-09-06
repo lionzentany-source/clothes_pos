@@ -115,13 +115,14 @@ class InventoryRepository {
   /// Get inventory item by variant ID
   Future<InventoryItemRow?> getInventoryItemByVariantId(int variantId) async {
     try {
-      final rows = await dao.searchVariantRows(limit: 1, offset: 0);
-
-      final row = rows.where((r) => (r['id'] as int?) == variantId).firstOrNull;
+      // Get the base row for display context (parent/brand names)
+      final row = await dao.getVariantRowById(variantId);
       if (row == null) return null;
-
+      // Get variant with attributes populated
+      final v = await dao.getVariantWithAttributesById(variantId);
+      final variant = v ?? ProductVariant.fromMap(row);
       return InventoryItemRow(
-        variant: ProductVariant.fromMap(row),
+        variant: variant,
         parentName: (row['parent_name'] as String?) ?? '',
         brandName: row['brand_name'] as String?,
       );

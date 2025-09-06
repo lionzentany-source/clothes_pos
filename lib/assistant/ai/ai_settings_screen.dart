@@ -193,7 +193,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       final res = await _ai.ask(prompt);
       var text = res.rawModelText ?? '';
       if (!text.contains('#منظومة_مرن')) {
-        text = text.trim() + '\n#منظومة_مرن';
+        text = '${text.trim()}\n#منظومة_مرن';
       }
       return text;
     }
@@ -207,6 +207,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
         ),
       ),
     );
+    if (!mounted) return; // Defensive guard for any follow-up logic added later
   }
 
   final _repo = sl<SettingsRepository>();
@@ -265,6 +266,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
   }
 
   Future<void> _save() async {
+    final navigator = Navigator.of(context);
     await _repo.set('ai_enabled', _enabled.value ? '1' : '0');
     await _repo.set(
       'ai_base_url',
@@ -283,7 +285,7 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       _tempCtrl.text.trim().isEmpty ? null : _tempCtrl.text.trim(),
     );
     if (!mounted) return;
-    Navigator.of(context).pop();
+    navigator.pop();
   }
 
   Future<void> _initSpeech() async {
@@ -314,9 +316,12 @@ class _AiSettingsScreenState extends State<AiSettingsScreen> {
       _textController.clear();
     });
     try {
+      // Capture the BuildContext and executor before awaiting, then guard that same context
+      final c = context;
+      final executor = _executor;
       final res = await _ai.ask(text);
-      // Use the executor to handle the action
-      final executionResult = await _executor.execute(context, res.action);
+      if (!c.mounted) return; // Guard the same context instance used below
+      final executionResult = await executor.execute(c, res.action);
       final toSpeak = executionResult ?? res.rawModelText ?? '';
 
       if (mounted) {

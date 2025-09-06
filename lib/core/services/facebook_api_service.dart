@@ -41,7 +41,7 @@ class FacebookApiService {
 
     if (kDebugMode) {
       final preview = _pageAccessToken.length > 10
-          ? _pageAccessToken.substring(0, 10) + '...'
+          ? '${_pageAccessToken.substring(0, 10)}...'
           : _pageAccessToken;
       print(
         'Fetching messages with Page ID: $_pageId and Access Token: $preview',

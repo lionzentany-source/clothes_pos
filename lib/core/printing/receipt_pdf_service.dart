@@ -358,15 +358,16 @@ class ReceiptPdfService {
                         if (variantText.isNotEmpty) ' $variantText',
                       ].join().trim();
                       // Extract attribute values if dynamic attributes are enabled
-                      List<String> _attrValues() {
+                      List<String> attributeValues() {
                         if (!FeatureFlags.useDynamicAttributes) return [];
                         final rawAttrs = (it['attributes'] as List?) ?? [];
                         return rawAttrs
                             .map((a) {
                               if (a == null) return '';
                               if (a is String) return a;
-                              if (a is Map)
+                              if (a is Map) {
                                 return (a['value'] ?? '').toString();
+                              }
                               try {
                                 final dyn = a as dynamic;
                                 return (dyn.value ?? '').toString();
@@ -378,7 +379,7 @@ class ReceiptPdfService {
                             .toList();
                       }
 
-                      final attrs = _attrValues();
+                      final attrs = attributeValues();
 
                       return pw.Padding(
                         padding: const pw.EdgeInsets.symmetric(vertical: 2),

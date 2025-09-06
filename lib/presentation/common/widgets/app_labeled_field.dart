@@ -9,6 +9,7 @@ class AppLabeledField extends StatelessWidget {
   final Widget? trailing;
   final bool readOnly;
   final VoidCallback? onTap;
+  final Key? fieldKey;
 
   const AppLabeledField({
     super.key,
@@ -19,6 +20,7 @@ class AppLabeledField extends StatelessWidget {
     this.trailing,
     this.readOnly = false,
     this.onTap,
+    this.fieldKey,
   });
 
   @override
@@ -46,6 +48,7 @@ class AppLabeledField extends StatelessWidget {
             child: AbsorbPointer(
               absorbing: readOnly && onTap != null,
               child: CupertinoTextField(
+                key: fieldKey,
                 controller: controller,
                 placeholder: placeholder,
                 keyboardType: keyboardType,

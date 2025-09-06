@@ -646,6 +646,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupFailed => 'Backup Failed';
 
   @override
+  String get clearCartConfirmation => 'Clear cart?';
+
+  @override
+  String get cartCleared => 'Cart cleared';
+
+  @override
+  String get saleHeld => 'Sale held';
+
+  @override
+  String get heldSalesTitle => 'Held sales';
+
+  @override
+  String get noHeldSales => 'No held sales';
+
+  @override
+  String get holdNamePlaceholder => 'Hold name (optional)';
+
+  @override
+  String get restoreSale => 'Restore';
+
+  @override
+  String get holdSaved => 'Sale held';
+
+  @override
   String get enterDbPathFirst => 'Enter .db file path first';
 
   @override
@@ -777,4 +801,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get valueDeleted => 'Value deleted';
+
+  @override
+  String get clearCart => 'Clear';
+
+  @override
+  String get holdCart => 'Hold';
+
+  @override
+  String get waitingSales => 'Waiting Sales';
+
+  @override
+  String get returnService => 'Return Service';
+
+  @override
+  String get returnProduct => 'Return Product';
+
+  @override
+  String get returnFullInvoice => 'Return Full Invoice';
+
+  @override
+  String get returnType => 'Return Type';
+
+  @override
+  String get selectReturnType => 'Select return type';
+
+  @override
+  String get saleIdLabel => 'Sale ID';
+
+  @override
+  String get returnReason => 'Return reason';
+
+  @override
+  String get returnReasonOptional => 'Return reason (optional)';
+
+  @override
+  String get returnSuccessTitle => 'Return Completed';
+
+  @override
+  String get returnSuccessMessage => 'Return has been processed successfully';
+
+  @override
+  String get returnItemsTitle => 'Return Items';
+
+  @override
+  String get noReturnableItems => 'No returnable items found';
+
+  @override
+  String get returnQty => 'Return Qty';
+
+  @override
+  String get unitPrice => 'Unit Price';
+
+  @override
+  String get totalRefund => 'Total Refund';
+
+  @override
+  String get processReturn => 'Process Return';
 }

@@ -52,4 +52,42 @@ flutter test
 
 ## CI
 
-Simple workflow runs analyze and tests on PRs (see .github/workflows/ci.yml).
+Simple workflow runs analyze and tests on PRs (see `.github/workflows/ci.yml`). It currently executes:
+
+1. Checkout & Flutter setup (stable channel)
+2. `flutter pub get`
+3. `flutter analyze`
+4. `flutter test` (all unit/widget tests)
+5. Coverage collection & optional upload (Codecov if token available)
+
+You can extend it with a production release job that performs an obfuscated, size‑optimized build once signing is configured (see below).
+
+### Android Release Signing & Optimized Build
+
+1. Generate a keystore (one time):
+   ```powershell
+   keytool -genkey -v -keystore android/upload-keystore.jks -storetype JKS -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+   ```
+2. Create `android/key.properties` (DO NOT COMMIT):
+   ```
+   storePassword=YOUR_STORE_PASSWORD
+   keyPassword=YOUR_KEY_PASSWORD
+   keyAlias=upload
+   storeFile=upload-keystore.jks
+   ```
+3. Reference it in `android/app/build.gradle.kts` signingConfig (already scaffolded – just uncomment / adapt if needed).
+4. Build a release APK / AppBundle with obfuscation & symbol files:
+   ```powershell
+   flutter build apk --release --obfuscate --split-debug-info=build/symbols
+   flutter build appbundle --release --obfuscate --split-debug-info=build/symbols
+   ```
+5. Keep the `build/symbols` directory private; it is required to de-obfuscate stack traces.
+
+Optional size wins:
+
+- Add ABI splits (Play Store will auto split AAB; for APK you can use `--target-platform android-arm,android-arm64,android-x64` with separate builds)
+- Use `--tree-shake-icons` if using Material icons subset only (verify Cupertino dependencies first)
+
+### PDF Arabic Font Fallback (Planned)
+
+To eliminate glyph warnings in generated PDFs, add high-quality Arabic fonts (e.g., Noto Naskh Arabic Regular/Bold) under `assets/fonts/` (filenames must match the entries added in `pubspec.yaml`). The label template engine loads in this priority: Noto Regular -> Noto Bold -> SF Arabic -> SF Latin. Missing assets are skipped silently. Add a widget / unit test later to assert at least one Arabic-capable font loads for deterministic output.

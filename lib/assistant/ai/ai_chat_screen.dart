@@ -119,7 +119,9 @@ class _AiChatScreenState extends State<AiChatScreen>
         return;
       }
       _speechSubscription = _speechService.results.listen((result) {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         setState(() {
           _currentQuestion = result.recognizedText;
         });
@@ -128,10 +130,11 @@ class _AiChatScreenState extends State<AiChatScreen>
         }
       });
       _soundLevelSubscription = _speechService.soundLevel.listen((level) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _soundLevel = level;
           });
+        }
       });
     } catch (e) {
       debugPrint('خطأ في تهيئة خدمة الصوت: $e');
@@ -139,7 +142,9 @@ class _AiChatScreenState extends State<AiChatScreen>
   }
 
   void _loadConversationHistory() {
-    if (_aiService == null) return;
+    if (_aiService == null) {
+      return;
+    }
     final history = _aiService!.getConversationHistory();
     setState(() {
       _messages.clear();
@@ -163,7 +168,9 @@ class _AiChatScreenState extends State<AiChatScreen>
   }
 
   void _loadSmartSuggestions() {
-    if (_aiService == null) return;
+    if (_aiService == null) {
+      return;
+    }
     final suggestions = _aiService!.getSmartSuggestions();
     setState(() {
       _suggestions.clear();
@@ -172,7 +179,9 @@ class _AiChatScreenState extends State<AiChatScreen>
   }
 
   Future<void> _handleUserInput(String input) async {
-    if (input.trim().isEmpty || _aiService == null) return;
+    if (input.trim().isEmpty || _aiService == null) {
+      return;
+    }
 
     setState(() {
       _isProcessing = true;
@@ -184,9 +193,13 @@ class _AiChatScreenState extends State<AiChatScreen>
 
     try {
       final result = await _aiService!.ask(input);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final response = await _executor.execute(context, result.action);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final displayText =
           response ?? result.rawModelText ?? 'لم أحصل على إجابة واضحة';
 
@@ -194,10 +207,14 @@ class _AiChatScreenState extends State<AiChatScreen>
 
       if (_autoSpeak && displayText.isNotEmpty) {
         await _speakText(displayText);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
       }
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _currentAnswer = displayText;
         _isConnected = true;
@@ -255,7 +272,9 @@ class _AiChatScreenState extends State<AiChatScreen>
   }
 
   void _updateContextualSuggestions(String userInput) {
-    if (_aiService == null) return;
+    if (_aiService == null) {
+      return;
+    }
     final newSuggestions = _aiService!.getSmartSuggestions(context: userInput);
     setState(() {
       _suggestions.clear();
@@ -312,11 +331,18 @@ class _AiChatScreenState extends State<AiChatScreen>
 
   void _sendTextMessage() {
     final text = _textController.text.trim();
-    if (text.isNotEmpty) _handleUserInput(text);
+    if (text.isNotEmpty) {
+      _handleUserInput(text);
+    }
   }
 
   Future<void> _clearConversation() async {
-    if (_aiService == null) return;
+    if (_aiService == null) {
+      return;
+    }
+    if (!context.mounted) {
+      return; // safety: ensure context still mounted before dialog
+    }
     final result = await showCupertinoDialog<bool>(
       context: context,
       builder: (context) => CupertinoAlertDialog(
@@ -348,10 +374,15 @@ class _AiChatScreenState extends State<AiChatScreen>
   }
 
   Future<void> _exportConversation() async {
-    if (_aiService == null) return;
+    if (_aiService == null) {
+      return;
+    }
     try {
       final filePath = await _aiService!.exportConversationHistory();
       if (filePath != null && mounted) {
+        if (!context.mounted) {
+          return; // safety
+        }
         showCupertinoDialog(
           context: context,
           builder: (context) => CupertinoAlertDialog(
@@ -368,6 +399,9 @@ class _AiChatScreenState extends State<AiChatScreen>
       }
     } catch (e) {
       if (mounted) {
+        if (!context.mounted) {
+          return; // safety
+        }
         showCupertinoDialog(
           context: context,
           builder: (context) => CupertinoAlertDialog(
@@ -383,6 +417,37 @@ class _AiChatScreenState extends State<AiChatScreen>
         );
       }
     }
+  }
+
+  void _showUsageStatistics() {
+    final stats = _aiService?.getUsageStatistics() ?? {};
+    if (!context.mounted) {
+      return; // safety
+    }
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('إحصائيات الاستخدام'),
+        content: Column(
+          children: [
+            _buildStatRow('إجمالي الطلبات', '${stats['total_requests']}'),
+            _buildStatRow('الطلبات الناجحة', '${stats['successful_requests']}'),
+            _buildStatRow('معدل النجاح', '${stats['success_rate']}%'),
+            _buildStatRow(
+              'متوسط وقت الاستجابة',
+              '${stats['average_response_time_ms']}ms',
+            ),
+            _buildStatRow('عدد المحادثات', '${stats['conversation_entries']}'),
+          ],
+        ),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('موافق'),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -443,7 +508,7 @@ class _AiChatScreenState extends State<AiChatScreen>
           bottom: BorderSide(
             color: CupertinoTheme.of(
               context,
-            ).primaryContrastingColor.withOpacity(0.1),
+            ).primaryContrastingColor.withValues(alpha: 0.1),
           ),
         ),
       ),
@@ -517,7 +582,7 @@ class _AiChatScreenState extends State<AiChatScreen>
                   decoration: BoxDecoration(
                     color: CupertinoTheme.of(
                       context,
-                    ).primaryColor.withOpacity(0.1),
+                    ).primaryColor.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
@@ -606,7 +671,7 @@ class _AiChatScreenState extends State<AiChatScreen>
                       style: TextStyle(
                         fontSize: 12,
                         color: message.isUser
-                            ? CupertinoColors.white.withOpacity(0.7)
+                            ? CupertinoColors.white.withValues(alpha: 0.7)
                             : CupertinoColors.secondaryLabel,
                       ),
                     ),
@@ -724,7 +789,7 @@ class _AiChatScreenState extends State<AiChatScreen>
           top: BorderSide(
             color: CupertinoTheme.of(
               context,
-            ).primaryContrastingColor.withOpacity(0.1),
+            ).primaryContrastingColor.withValues(alpha: 0.1),
           ),
         ),
       ),
@@ -848,35 +913,6 @@ class _AiChatScreenState extends State<AiChatScreen>
           child: const Text('إلغاء'),
           onPressed: () => Navigator.of(context).pop(),
         ),
-      ),
-    );
-  }
-
-  void _showUsageStatistics() {
-    final stats = _aiService?.getUsageStatistics() ?? {};
-
-    showCupertinoDialog(
-      context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('إحصائيات الاستخدام'),
-        content: Column(
-          children: [
-            _buildStatRow('إجمالي الطلبات', '${stats['total_requests']}'),
-            _buildStatRow('الطلبات الناجحة', '${stats['successful_requests']}'),
-            _buildStatRow('معدل النجاح', '${stats['success_rate']}%'),
-            _buildStatRow(
-              'متوسط وقت الاستجابة',
-              '${stats['average_response_time_ms']}ms',
-            ),
-            _buildStatRow('عدد المحادثات', '${stats['conversation_entries']}'),
-          ],
-        ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('موافق'),
-            onPressed: () => Navigator.of(context).pop(),
-          ),
-        ],
       ),
     );
   }
