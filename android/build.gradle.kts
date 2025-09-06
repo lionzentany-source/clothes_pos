@@ -12,9 +12,7 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
 }
-subprojects {
-    project.evaluationDependsOn(":app")
-}
+// Removed legacy namespace fallback injection (no longer needed after replacing old plugins).
 
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
